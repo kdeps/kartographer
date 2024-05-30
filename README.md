@@ -26,7 +26,9 @@ To use this package, you need to import it into your Go project. Make sure you h
 `go.mod` file:
 
 ```go
-require "github.com/kdeps/kartographer"
+import (
+  graph "github.com/kdeps/kartographer/graph"
+)
 ```
 
 ## Usage
