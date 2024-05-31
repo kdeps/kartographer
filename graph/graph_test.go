@@ -25,3 +25,20 @@ func TestNewDependencyGraph(t *testing.T) {
 	assert.Empty(t, dg.DependencyGraph)
 	assert.Empty(t, dg.VisitedPaths)
 }
+
+func TestNewDependencyGraph_Circular(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	logger := log.Default()
+	dependencies := map[string][]string{
+		"A": {"B", "C"},
+		"B": {"C"},
+		"C": {"A"}, // Circular dependency here
+	}
+
+	dg := NewDependencyGraph(fs, logger, dependencies)
+
+	assert.NotNil(t, dg)
+	assert.Equal(t, dependencies, dg.NodeDependencies)
+	assert.Empty(t, dg.DependencyGraph)
+	assert.Empty(t, dg.VisitedPaths)
+}

@@ -29,3 +29,24 @@ func TestListDependencyTree(t *testing.T) {
 
 	assert.Equal(t, expectedOutput, output)
 }
+
+func TestListDependencyTree_Circular(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	var buf bytes.Buffer
+	logger := log.NewWithOptions(&buf, log.Options{})
+	dependencies := map[string][]string{
+		"A": {"B", "C"},
+		"B": {"D"},
+		"C": {"D"},
+		"D": {"A"}, // Circular dependency here
+	}
+	dg := NewDependencyGraph(fs, logger, dependencies)
+
+	output := captureOutput(func() {
+		dg.ListDependencyTree("A")
+	})
+
+	expectedOutput := ""
+
+	assert.Equal(t, expectedOutput, output)
+}

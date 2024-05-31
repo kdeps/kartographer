@@ -49,3 +49,44 @@ func TestListDirectDependenciesB(t *testing.T) {
 
 	assert.Equal(t, expectedOutput, output)
 }
+
+func TestListDirectDependenciesA_Circular(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	logger := log.Default()
+	dependencies := map[string][]string{
+		"A": {"B", "C"},
+		"B": {"C"},
+		"C": {"A"}, // Circular dependency here
+	}
+
+	dg := NewDependencyGraph(fs, logger, dependencies)
+
+	output := captureOutput(func() {
+		dg.ListDirectDependencies("A")
+	})
+
+	expectedOutput := "A\nA -> B\nA -> B -> C\n"
+
+	assert.Equal(t, expectedOutput, output)
+}
+
+func TestListDirectDependenciesB_Circular(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	var buf bytes.Buffer
+	logger := log.NewWithOptions(&buf, log.Options{})
+	dependencies := map[string][]string{
+		"A": {"B", "C"},
+		"B": {"D"},
+		"C": {"D"},
+		"D": {"A"}, // Circular dependency here
+	}
+	dg := NewDependencyGraph(fs, logger, dependencies)
+
+	output := captureOutput(func() {
+		dg.ListDirectDependencies("A")
+	})
+
+	expectedOutput := "A\nA -> B\nA -> B -> D\nA -> C\n"
+
+	assert.Equal(t, expectedOutput, output)
+}
