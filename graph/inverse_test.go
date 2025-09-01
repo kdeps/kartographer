@@ -2,6 +2,7 @@ package graph
 
 import (
 	"bytes"
+	"sort"
 	"testing"
 
 	"github.com/charmbracelet/log"
@@ -26,8 +27,11 @@ func TestInvertDependencies(t *testing.T) {
 		"D": {"B", "C"},
 	}
 	for k, v := range expected {
-		if !equal(inverted[k], v) {
-			t.Errorf("Expected %v, got %v", v, inverted[k])
+		got := inverted[k]
+		sort.Strings(got)
+		sort.Strings(v)
+		if !equal(got, v) {
+			t.Errorf("Expected %v, got %v", v, got)
 		}
 	}
 }
@@ -51,8 +55,11 @@ func TestInvertDependencies_Circular(t *testing.T) {
 		"A": {"D"},
 	}
 	for k, v := range expected {
-		if !equal(inverted[k], v) {
-			t.Errorf("Expected %v, got %v", v, inverted[k])
+		got := inverted[k]
+		sort.Strings(got)
+		sort.Strings(v)
+		if !equal(got, v) {
+			t.Errorf("Expected %v, got %v", v, got)
 		}
 	}
 }
