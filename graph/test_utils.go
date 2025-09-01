@@ -6,6 +6,18 @@ import (
 	"os"
 )
 
+// PipeCreator interface for testable pipe creation
+type PipeCreator interface {
+	CreatePipe() (*os.File, *os.File, error)
+}
+
+// OsPipeCreator implements PipeCreator using os.Pipe
+type OsPipeCreator struct{}
+
+func (o *OsPipeCreator) CreatePipe() (*os.File, *os.File, error) {
+	return os.Pipe()
+}
+
 // captureOutput captures the output of a function for testing
 func captureOutput(f func()) string {
 	r, w := createPipe()
@@ -18,7 +30,12 @@ func captureOutput(f func()) string {
 }
 
 func createPipe() (*os.File, *os.File) {
-	r, w, err := os.Pipe()
+	creator := &OsPipeCreator{}
+	return createPipeWithCreator(creator)
+}
+
+func createPipeWithCreator(creator PipeCreator) (*os.File, *os.File) {
+	r, w, err := creator.CreatePipe()
 	if err != nil {
 		panic(err)
 	}
