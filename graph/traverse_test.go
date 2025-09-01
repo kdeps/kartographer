@@ -50,3 +50,18 @@ func TestTraverseDependencyGraph_Circular(t *testing.T) {
 
 	assert.Equal(t, output, expectedOutput)
 }
+
+func TestTraverseDependencyGraph_VisitedPath(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	var buf bytes.Buffer
+	logger := log.NewWithOptions(&buf, log.Options{})
+	dependencies := map[string][]string{
+		"A": {"B"},
+		"B": {},
+	}
+	dg := NewDependencyGraph(fs, logger, dependencies)
+	dg.VisitedPaths["A"] = true
+	visited := make(map[string]bool)
+	
+	dg.TraverseDependencyGraph("A", dependencies, visited)
+}
