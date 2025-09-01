@@ -27,3 +27,13 @@ func TestPrintDependencyPath(t *testing.T) {
 
 	assert.Equal(t, expectedOutput, output)
 }
+
+func TestConstructDependencyPath_DefaultCase(t *testing.T) {
+	dg := &DependencyGraph{}
+	path := []string{"A", "B"}
+	result := dg.ConstructDependencyPath(path, "unknown")
+	expected := "A -> B"
+	if result != expected {
+		t.Errorf("Expected %v, got %v", expected, result)
+	}
+}
