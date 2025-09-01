@@ -156,3 +156,22 @@ func TestTraverseGraph_VisitedPath(t *testing.T) {
 	
 	service.TraverseGraph("A")
 }
+
+func TestTraverseNode_VisitedPath(t *testing.T) {
+	deps := map[string][]string{
+		"A": {"B"},
+		"B": {},
+	}
+	service := createTestService(deps).(*DependencyServiceImpl)
+	service.traversal = domain.NewGraphTraversal()
+	
+	// First, traverse to create the path
+	service.traverseNode("A")
+	
+	// Reset and set up the visited path scenario
+	service.traversal = domain.NewGraphTraversal()
+	service.traversal.VisitedPaths["A"] = true
+	
+	// This should hit the visited path condition
+	service.traverseNode("A")
+}
