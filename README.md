@@ -19,6 +19,7 @@ dependencies.
   - [InvertDependencies](#invertdependencies)
   - [ListDirectDependencies](#listdirectdependencies)
 - [Utility Functions](#utility-functions)
+- [Indexing a Folder](#indexing-a-folder)
 
 ## Installation
 
@@ -152,3 +153,49 @@ This function can be used to format and print paths in a human-readable form.
 
 With this package, you can easily manage and traverse dependency graphs in Go, allowing for complex dependency analysis
 and visualization.
+
+## Indexing a Folder
+
+`IndexedGraph` indexes an existing folder into a persistent [bbolt](https://github.com/etcd-io/bbolt) database and
+lets you query the resulting graph by file or by topic, reusing the same tree-printing machinery as
+`DependencyGraph`.
+
+Two kinds of edges are derived automatically while indexing:
+
+- **References** — explicit markdown links (`[text](path)`) and wikilinks (`[[path]]`) found in a file's content,
+  resolved relative to the file and kept only if they resolve to another file inside the indexed root.
+- **Topics** — a `topics:` or `tags:` list declared in a leading YAML frontmatter block (`---\n...\n---`). Files
+  sharing a topic are considered related.
+
+```go
+import (
+    "github.com/charmbracelet/log"
+    "github.com/spf13/afero"
+    graph "github.com/kdeps/kartographer/graph"
+)
+
+ig, err := graph.NewIndexedGraph(afero.NewOsFs(), log.Default(), "index.db")
+if err != nil {
+    // handle error
+}
+defer ig.Close()
+
+// Walk ./docs and index every .md/.markdown/.txt/.yaml/.yml file.
+// Pass a non-nil []string to override the default extension allowlist.
+if err := ig.IndexFolder("./docs", nil); err != nil {
+    // handle error
+}
+
+// Show the reference tree for a single file, plus every file that shares a topic with it.
+ig.ShowFile("docs/intro.md")
+
+// Show every file tagged with a given topic, and each of those files' own references.
+ig.ShowTopic("getting-started")
+
+// Show the reference tree for every root file in the index (files nothing else references) --
+// i.e. graph everything that's been indexed.
+ig.ShowAll()
+```
+
+Re-running `IndexFolder` on the same database fully re-indexes the folder, overwriting prior records for files that
+still exist and updating the topic index accordingly.

@@ -1,11 +1,13 @@
 module github.com/kdeps/kartographer
 
-go 1.22.3
+go 1.25.0
 
 require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/spf13/afero v1.11.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
+	go.etcd.io/bbolt v1.5.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -21,7 +23,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
