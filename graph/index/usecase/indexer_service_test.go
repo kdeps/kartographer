@@ -35,8 +35,10 @@ func TestIndexerService_IndexFolder_BuildsReferenceGraph(t *testing.T) {
 		[]byte("---\ntopics: [rust]\n---\nUnrelated."), 0o644))
 
 	svc := newTestService(t, fs, "/root")
-	if err := svc.IndexFolder("/root", []string{".md"}); err != nil {
+	if n, err := svc.IndexFolder("/root", []string{".md"}); err != nil {
 		t.Fatalf("IndexFolder: %v", err)
+	} else if n != 3 {
+		t.Fatalf("IndexFolder: got %d files indexed, want 3", n)
 	}
 
 	refGraph, err := svc.BuildReferenceGraph()
@@ -65,7 +67,7 @@ func TestIndexerService_FilesRelatedByTopic(t *testing.T) {
 	must(t, afero.WriteFile(fs, "/root/c.md", []byte("No frontmatter."), 0o644))
 
 	svc := newTestService(t, fs, "/root")
-	if err := svc.IndexFolder("/root", []string{".md"}); err != nil {
+	if _, err := svc.IndexFolder("/root", []string{".md"}); err != nil {
 		t.Fatalf("IndexFolder: %v", err)
 	}
 

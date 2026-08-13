@@ -47,8 +47,9 @@ func (ig *IndexedGraph) Close() error {
 }
 
 // IndexFolder walks root and (re)indexes every matching file into the bbolt
-// database. Extensions defaults to DefaultIndexExtensions when nil.
-func (ig *IndexedGraph) IndexFolder(root string, extensions []string) error {
+// database, returning the number of files indexed. Extensions defaults to
+// DefaultIndexExtensions when nil.
+func (ig *IndexedGraph) IndexFolder(root string, extensions []string) (int, error) {
 	if extensions == nil {
 		extensions = DefaultIndexExtensions
 	}
@@ -68,30 +69,81 @@ func (ig *IndexedGraph) indexer() (*usecase.IndexerService, domain.IndexStore) {
 	return ig.idx, ig.store
 }
 
+// GraphFile returns the full indexed reference graph, plus every other
+// indexed file that shares at least one topic with path.
+func (ig *IndexedGraph) GraphFile(path string) (references map[string][]string, relatedByTopic []string, err error) {
+	idx, _ := ig.indexer()
+
+	references, err = idx.BuildReferenceGraph()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	relatedByTopic, err = idx.FilesRelatedByTopic(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	sort.Strings(relatedByTopic)
+	return references, relatedByTopic, nil
+}
+
+// GraphTopic returns every indexed file tagged with topic, plus the full
+// indexed reference graph.
+func (ig *IndexedGraph) GraphTopic(topic string) (files []string, references map[string][]string, err error) {
+	idx, _ := ig.indexer()
+
+	files, err = idx.FilesForTopic(topic)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	references, err = idx.BuildReferenceGraph()
+	if err != nil {
+		return nil, nil, err
+	}
+	return files, references, nil
+}
+
+// GraphAll returns the full indexed reference graph, plus every root file in
+// the index (files that nothing else references) -- "graph all the indexed
+// data".
+func (ig *IndexedGraph) GraphAll() (references map[string][]string, roots []string, err error) {
+	idx, _ := ig.indexer()
+
+	references, err = idx.BuildReferenceGraph()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dg := NewDependencyGraph(ig.Fs, ig.Logger, references)
+	referenced := dg.InvertDependencies()
+
+	for node := range references {
+		if _, isReferenced := referenced[node]; !isReferenced {
+			roots = append(roots, node)
+		}
+	}
+	sort.Strings(roots)
+	return references, roots, nil
+}
+
 // ShowFile prints the reference tree rooted at path, followed by every other
 // indexed file that shares at least one topic with it.
 func (ig *IndexedGraph) ShowFile(path string) error {
-	idx, _ := ig.indexer()
-
-	refGraph, err := idx.BuildReferenceGraph()
+	references, related, err := ig.GraphFile(path)
 	if err != nil {
 		return err
 	}
 
-	dg := NewDependencyGraph(ig.Fs, ig.Logger, refGraph)
+	dg := NewDependencyGraph(ig.Fs, ig.Logger, references)
 	fmt.Printf("References for %s:\n", path)
 	dg.ListDependencyTree(path)
 
-	related, err := idx.FilesRelatedByTopic(path)
-	if err != nil {
-		return err
-	}
 	fmt.Println("Related by topic:")
 	if len(related) == 0 {
 		fmt.Println("  (none)")
 		return nil
 	}
-	sort.Strings(related)
 	for _, r := range related {
 		fmt.Printf("  %s\n", r)
 	}
@@ -101,21 +153,14 @@ func (ig *IndexedGraph) ShowFile(path string) error {
 // ShowTopic prints every indexed file tagged with topic, then each of those
 // files' own direct references, as a single tree rooted at the topic.
 func (ig *IndexedGraph) ShowTopic(topic string) error {
-	idx, _ := ig.indexer()
-
-	files, err := idx.FilesForTopic(topic)
-	if err != nil {
-		return err
-	}
-
-	refGraph, err := idx.BuildReferenceGraph()
+	files, references, err := ig.GraphTopic(topic)
 	if err != nil {
 		return err
 	}
 
 	rootNode := "topic:" + topic
-	merged := make(map[string][]string, len(refGraph)+1)
-	for k, v := range refGraph {
+	merged := make(map[string][]string, len(references)+1)
+	for k, v := range references {
 		merged[k] = v
 	}
 	merged[rootNode] = files
@@ -129,24 +174,12 @@ func (ig *IndexedGraph) ShowTopic(topic string) error {
 // ShowAll prints the reference tree for every root file in the index (files
 // that nothing else references) -- "graph all the indexed data".
 func (ig *IndexedGraph) ShowAll() error {
-	idx, _ := ig.indexer()
-
-	refGraph, err := idx.BuildReferenceGraph()
+	references, roots, err := ig.GraphAll()
 	if err != nil {
 		return err
 	}
 
-	dg := NewDependencyGraph(ig.Fs, ig.Logger, refGraph)
-	referenced := dg.InvertDependencies()
-
-	var roots []string
-	for node := range refGraph {
-		if _, isReferenced := referenced[node]; !isReferenced {
-			roots = append(roots, node)
-		}
-	}
-	sort.Strings(roots)
-
+	dg := NewDependencyGraph(ig.Fs, ig.Logger, references)
 	for _, root := range roots {
 		fmt.Printf("References for %s:\n", root)
 		dg.ListDependencyTree(root)

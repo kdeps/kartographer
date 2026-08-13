@@ -34,18 +34,20 @@ func NewIndexerService(
 
 // IndexFolder walks root, extracting references and topics from every file
 // matching extensions, and stores a FileRecord for each.
-func (s *IndexerService) IndexFolder(root string, extensions []string) error {
+// IndexFolder walks root and indexes every matching file, returning the
+// number of files indexed.
+func (s *IndexerService) IndexFolder(root string, extensions []string) (int, error) {
 	paths, err := s.walker.Walk(root, extensions)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, path := range paths {
 		if err := s.indexFile(path); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return len(paths), nil
 }
 
 func (s *IndexerService) indexFile(path string) error {

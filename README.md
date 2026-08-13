@@ -182,7 +182,9 @@ defer ig.Close()
 
 // Walk ./docs and index every .md/.markdown/.txt/.yaml/.yml file.
 // Pass a non-nil []string to override the default extension allowlist.
-if err := ig.IndexFolder("./docs", nil); err != nil {
+// Returns the number of files indexed.
+n, err := ig.IndexFolder("./docs", nil)
+if err != nil {
     // handle error
 }
 
@@ -195,6 +197,20 @@ ig.ShowTopic("getting-started")
 // Show the reference tree for every root file in the index (files nothing else references) --
 // i.e. graph everything that's been indexed.
 ig.ShowAll()
+```
+
+`Show*` print to stdout via the logger. For structured (non-printing) access to the same data — e.g. to feed a UI or an API response — use the `Graph*` counterparts, which return the data directly instead of printing it:
+
+```go
+// references is the full indexed reference graph (map[file][]references).
+// relatedByTopic is every other file that shares a topic with docs/intro.md.
+references, relatedByTopic, err := ig.GraphFile("docs/intro.md")
+
+// files is every file tagged "getting-started"; references is the full reference graph.
+files, references, err := ig.GraphTopic("getting-started")
+
+// references is the full reference graph; roots is every file nothing else references.
+references, roots, err := ig.GraphAll()
 ```
 
 Re-running `IndexFolder` on the same database fully re-indexes the folder, overwriting prior records for files that
