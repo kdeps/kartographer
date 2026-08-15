@@ -55,15 +55,26 @@ func (e *LinkReferenceExtractor) Extract(content, fromPath string) []string {
 }
 
 func (e *LinkReferenceExtractor) resolve(fromPath, target string) (string, bool) {
+	if isExternalURL(target) {
+		return "", false
+	}
+	return resolveRelative(e.Root, fromPath, target)
+}
+
+// resolveRelative resolves target relative to fromPath's directory and
+// returns it only if it stays inside root -- the containment rule shared by
+// every extractor that resolves relative references (markdown links, HTML
+// href/src, relative source-code imports).
+func resolveRelative(root, fromPath, target string) (string, bool) {
 	target = strings.TrimSpace(target)
-	if target == "" || isExternalURL(target) {
+	if target == "" {
 		return "", false
 	}
 
 	dir := filepath.Dir(fromPath)
 	resolved := filepath.Clean(filepath.Join(dir, target))
 
-	rel, err := filepath.Rel(e.Root, resolved)
+	rel, err := filepath.Rel(root, resolved)
 	if err != nil || strings.HasPrefix(rel, "..") {
 		return "", false
 	}
@@ -86,14 +97,19 @@ func NewFrontmatterTopicExtractor() domain.TopicExtractor {
 	return &FrontmatterTopicExtractor{}
 }
 
-func (e *FrontmatterTopicExtractor) Extract(content string) []string {
+func (e *FrontmatterTopicExtractor) Extract(content, _ string) []string {
 	m := frontmatterPattern.FindStringSubmatch(content)
 	if m == nil {
 		return nil
 	}
+	return topicsFromYAML(m[1])
+}
 
+// topicsFromYAML unmarshals src (a YAML document, or a frontmatter block's
+// inner content) into topics/tags, deduped and order-preserved.
+func topicsFromYAML(src string) []string {
 	var fm frontmatter
-	if err := yaml.Unmarshal([]byte(m[1]), &fm); err != nil {
+	if err := yaml.Unmarshal([]byte(src), &fm); err != nil {
 		return nil
 	}
 

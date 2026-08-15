@@ -55,8 +55,8 @@ func (ig *IndexedGraph) IndexFolder(root string, extensions []string) (int, erro
 	}
 
 	walker := infrastructure.NewAferoFileWalker(ig.Fs)
-	refExtr := infrastructure.NewLinkReferenceExtractor(root)
-	topicExtr := infrastructure.NewFrontmatterTopicExtractor()
+	refExtr := infrastructure.NewCompositeReferenceExtractor(root)
+	topicExtr := infrastructure.NewCompositeTopicExtractor()
 
 	ig.idx = usecase.NewIndexerService(ig.Fs, walker, refExtr, topicExtr, ig.store)
 	return ig.idx.IndexFolder(root, extensions)

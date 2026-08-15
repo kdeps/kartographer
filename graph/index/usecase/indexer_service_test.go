@@ -88,6 +88,44 @@ func TestIndexerService_FilesRelatedByTopic(t *testing.T) {
 	}
 }
 
+func TestIndexerService_IndexFolder_SetKnownFilesForNonRelativeResolution(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	must(t, afero.WriteFile(fs, "/root/main.go", []byte(`package main
+
+import "example.com/root/pkgname"
+
+func main() {}
+`), 0o644))
+	// Named differently from its directory so the known-file index's
+	// directory-basename entry ("pkgname" -> the dir) stays unambiguous.
+	must(t, afero.WriteFile(fs, "/root/pkgname/impl.go", []byte("package pkgname\n"), 0o644))
+
+	dbPath := filepath.Join(t.TempDir(), "index.db")
+	store, err := infrastructure.NewBoltIndexStore(dbPath)
+	if err != nil {
+		t.Fatalf("NewBoltIndexStore: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	walker := infrastructure.NewAferoFileWalker(fs)
+	refExtr := infrastructure.NewCompositeReferenceExtractor("/root")
+	topicExtr := infrastructure.NewCompositeTopicExtractor()
+	svc := NewIndexerService(fs, walker, refExtr, topicExtr, store)
+
+	if _, err := svc.IndexFolder("/root", []string{".go"}); err != nil {
+		t.Fatalf("IndexFolder: %v", err)
+	}
+
+	refGraph, err := svc.BuildReferenceGraph()
+	if err != nil {
+		t.Fatalf("BuildReferenceGraph: %v", err)
+	}
+	got := refGraph["/root/main.go"]
+	if len(got) != 1 || got[0] != "/root/pkgname" {
+		t.Fatalf("expected main.go's non-relative import resolved via the known file set to /root/pkgname, got %v", got)
+	}
+}
+
 func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {

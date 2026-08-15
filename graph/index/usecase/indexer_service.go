@@ -42,6 +42,12 @@ func (s *IndexerService) IndexFolder(root string, extensions []string) (int, err
 		return 0, err
 	}
 
+	// Extractors that resolve non-relative references (e.g. import
+	// "pkg/foo") need the full file set to match names against.
+	if fsa, ok := s.refExtr.(domain.FileSetAware); ok {
+		fsa.SetKnownFiles(paths)
+	}
+
 	for _, path := range paths {
 		if err := s.indexFile(path); err != nil {
 			return 0, err
@@ -64,7 +70,7 @@ func (s *IndexerService) indexFile(path string) error {
 	rec := domain.NewFileRecord(
 		path,
 		s.refExtr.Extract(content, path),
-		s.topicExtr.Extract(content),
+		s.topicExtr.Extract(content, path),
 		info.ModTime().Unix(),
 	)
 	return s.store.PutFile(rec)

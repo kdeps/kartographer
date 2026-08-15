@@ -160,12 +160,27 @@ and visualization.
 lets you query the resulting graph by file or by topic, reusing the same tree-printing machinery as
 `DependencyGraph`.
 
-Two kinds of edges are derived automatically while indexing:
+Two kinds of edges are derived automatically while indexing, using a per-file-extension extractor:
 
-- **References** — explicit markdown links (`[text](path)`) and wikilinks (`[[path]]`) found in a file's content,
-  resolved relative to the file and kept only if they resolve to another file inside the indexed root.
-- **Topics** — a `topics:` or `tags:` list declared in a leading YAML frontmatter block (`---\n...\n---`). Files
-  sharing a topic are considered related.
+- **References** — resolved relative to the file, kept only if they resolve to another file inside the indexed root
+  (a link outside the root, or to an external URL/stdlib/third-party package, is dropped, not guessed at):
+  - `.md` / `.markdown` / `.txt` — markdown links (`[text](path)`) and wikilinks (`[[path]]`)
+  - `.html` / `.htm` — `href`/`src` attribute values
+  - Source code — import/include statements, both relative (`from . import x`, `#include "local.h"`) and
+    non-relative/module-style (`import "github.com/x/pkg"`, `import foo.bar`), the latter resolved by matching
+    against the files actually present in the indexed root. Covers Go, Python, Rust, TypeScript/JavaScript, C/C++,
+    Ruby, and Java. This is heuristic regex extraction, not a full parser — it won't catch every construct a
+    language's import system supports, and ambiguous non-relative matches (multiple files with the same name) are
+    dropped rather than guessed.
+  - `.json` / `.yaml` / `.yml` (bare, not paired with a `---` frontmatter block) — no reference extraction; too
+    ambiguous which string values are paths.
+- **Topics** — a `topics:` or `tags:` list, either declared in a leading YAML frontmatter block (`---\n...\n---`,
+  any file type) or, for a bare `.yaml`/`.yml`/`.json` file with no frontmatter markers, a top-level key in the
+  whole document. Files sharing a topic are considered related.
+
+The default extension allowlist (`.md`, `.markdown`, `.txt`, `.yaml`, `.yml`) is unchanged — source code, HTML, and
+JSON support is opt-in via an explicit `extensions` argument to `IndexFolder`, so indexing a docs folder never
+silently starts walking an entire adjacent source tree.
 
 ```go
 import (
