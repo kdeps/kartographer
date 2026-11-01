@@ -230,3 +230,17 @@ references, roots, err := ig.GraphAll()
 
 Re-running `IndexFolder` on the same database fully re-indexes the folder, overwriting prior records for files that
 still exist and updating the topic index accordingly.
+
+## Code graph MCP server
+
+`cmd/kartographer-mcp` indexes a Go module and serves its code graph over MCP on stdio, using the tool names
+Graphify uses (`graphify_find`, `graphify_callers`, `graphify_callees`, `graphify_impact`, `graphify_tests_for`,
+`graph_stats`, `list_repositories`).
+
+```bash
+go run ./cmd/kartographer-mcp -dir /path/to/module
+```
+
+Register it in an MCP client as a stdio server with the command above. The index is built once at startup from
+resolved call edges (Go SSA with VTA). `strict_calls` and `code_only` are accepted for compatibility and have no
+effect yet.
