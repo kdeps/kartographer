@@ -23,51 +23,79 @@ import (
 	"github.com/charmbracelet/log"
 
 	"github.com/kdeps/kartographer/graph"
+	"github.com/kdeps/kartographer/lsp"
 )
 
-// Symbol is one function or method defined in the module.
+// Symbol is one function or method in the module.
 type Symbol struct {
-	Name   string // full name, e.g. "example.com/m/pkg.(*T).Method"
-	File   string // path relative to the module root
-	Line   int
-	IsTest bool // defined in a _test.go file
+	Name     string // full name, e.g. "example.com/m/pkg.(*T).Method" or "src/app.py::Login.run"
+	File     string // path relative to the module root
+	Line     int
+	Language string // "go", or the registry id of a language server
+	IsTest   bool   // defined in a test file
 }
 
 // Index is the code graph of one module.
 type Index struct {
 	Module  string
 	Symbols map[string]Symbol
+	// Missing lists languages found in the module whose language server is
+	// not installed, so their symbols are absent.
+	Missing []string
 	deps    *graph.DependencyGraph
 	callers map[string][]string
 }
 
-// Build loads every package under dir (with tests) and records each
-// module-internal function and the functions it calls.
+// Build indexes every function in dir. Go modules are analysed with SSA and
+// VTA. Other languages found under dir are analysed by the language server
+// that registry.yaml names for them, when one is installed.
 func Build(dir string) (*Index, error) {
 	root, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
+	if _, err := os.Stat(root); err != nil {
+		return nil, err
+	}
+	idx := &Index{Symbols: map[string]Symbol{}}
+	deps := map[string][]string{}
+
+	if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
+		if err := indexGo(root, idx, deps); err != nil {
+			return nil, err
+		}
+	}
+	if err := indexServers(root, idx, deps); err != nil {
+		return nil, err
+	}
+	if idx.Module == "" {
+		idx.Module = filepath.Base(root)
+	}
+	idx.deps = graph.NewDependencyGraph(afero.NewMemMapFs(), log.Default(), deps)
+	idx.callers = idx.deps.InvertDependencies()
+	return idx, nil
+}
+
+func indexGo(root string, idx *Index, deps map[string][]string) error {
 	cfg := &packages.Config{Mode: packages.LoadAllSyntax, Dir: root, Tests: true}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if packages.PrintErrors(pkgs) > 0 {
-		return nil, errors.New("the packages do not build")
+		return errors.New("the packages do not build")
 	}
 	module, err := modulePath(root)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	idx.Module = module
 	prog, _ := ssautil.AllPackages(pkgs, ssa.InstantiateGenerics)
 	prog.Build()
 	fns := ssautil.AllFunctions(prog)
 	cg := vta.CallGraph(fns, cha.CallGraph(prog))
 	cg.DeleteSyntheticNodes()
 
-	idx := &Index{Module: module, Symbols: map[string]Symbol{}}
-	deps := map[string][]string{}
 	for fn := range fns {
 		if !inModule(fn, module) || !fn.Pos().IsValid() {
 			continue
@@ -77,17 +105,107 @@ func Build(dir string) (*Index, error) {
 		if !strings.HasPrefix(p.Filename, root+string(filepath.Separator)) {
 			continue // generated code, e.g. the test main in the build cache
 		}
+		rel := relPath(root, p.Filename)
 		idx.Symbols[name] = Symbol{
-			Name:   name,
-			File:   relPath(root, p.Filename),
-			Line:   p.Line,
-			IsTest: strings.HasSuffix(p.Filename, "_test.go"),
+			Name:     name,
+			File:     rel,
+			Line:     p.Line,
+			Language: "go",
+			IsTest:   strings.HasSuffix(rel, "_test.go"),
 		}
 		deps[name] = calleesOf(cg, fn, module)
 	}
-	idx.deps = graph.NewDependencyGraph(afero.NewMemMapFs(), log.Default(), deps)
-	idx.callers = idx.deps.InvertDependencies()
-	return idx, nil
+	return nil
+}
+
+// indexServers runs the registry's language server for each non-Go language
+// found under root.
+func indexServers(root string, idx *Index, deps map[string][]string) error {
+	reg, err := lsp.LoadRegistry()
+	if err != nil {
+		return err
+	}
+	byLang := map[string][]string{}
+	var order []string
+	for _, rel := range sourceFiles(root) {
+		lang, ok := reg.ForFile(rel)
+		if !ok || lang.ID == "go" {
+			continue
+		}
+		if _, seen := byLang[lang.ID]; !seen {
+			order = append(order, lang.ID)
+		}
+		byLang[lang.ID] = append(byLang[lang.ID], rel)
+	}
+	for _, id := range order {
+		lang := langByID(reg, id)
+		server := lang.Server()
+		if server == nil {
+			idx.Missing = append(idx.Missing, fmt.Sprintf("%s: none of %v is installed", id, serverNames(lang)))
+			continue
+		}
+		res, err := lsp.Analyze(root, id, server, byLang[id])
+		if err != nil {
+			return fmt.Errorf("%s: %w", id, err)
+		}
+		for _, f := range res.Funcs {
+			idx.Symbols[f.Key] = Symbol{Name: f.Key, File: f.File, Line: f.Line, Language: id, IsTest: isTestFile(f.File)}
+			deps[f.Key] = res.Calls[f.Key]
+		}
+	}
+	return nil
+}
+
+// sourceFiles lists the files under root, skipping hidden and dependency directories.
+func sourceFiles(root string) []string {
+	var out []string
+	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if p != root && (strings.HasPrefix(d.Name(), ".") || skipDirs[d.Name()]) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, err := filepath.Rel(root, p)
+		if err == nil {
+			out = append(out, filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	sort.Strings(out)
+	return out
+}
+
+var skipDirs = map[string]bool{ //nolint:gochecknoglobals // fixed list
+	"node_modules": true, "vendor": true, "target": true, "build": true,
+	"dist": true, "__pycache__": true,
+}
+
+func isTestFile(rel string) bool {
+	base := filepath.Base(rel)
+	return strings.Contains(base, "_test.") || strings.Contains(base, ".test.") ||
+		strings.Contains(base, ".spec.") || strings.HasPrefix(base, "test_") ||
+		strings.Contains(filepath.ToSlash(rel), "/tests/") || strings.HasPrefix(rel, "tests/")
+}
+
+func langByID(reg lsp.Registry, id string) lsp.Language {
+	for _, l := range reg.Languages {
+		if l.ID == id {
+			return l
+		}
+	}
+	return lsp.Language{}
+}
+
+func serverNames(l lsp.Language) []string {
+	var out []string
+	for _, s := range l.Servers {
+		out = append(out, s[0])
+	}
+	return out
 }
 
 // Stats reports the number of symbols and call edges.
@@ -199,7 +317,7 @@ func (ix *Index) resolve(q string) (string, error) {
 	}
 	var hits []string
 	for name := range ix.Symbols {
-		if strings.HasSuffix(name, "."+q) || strings.HasSuffix(name, "/"+q) {
+		if strings.HasSuffix(name, "."+q) || strings.HasSuffix(name, "/"+q) || strings.HasSuffix(name, "::"+q) {
 			hits = append(hits, name)
 		}
 	}

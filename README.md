@@ -241,6 +241,12 @@ Graphify uses (`graphify_find`, `graphify_callers`, `graphify_callees`, `graphif
 go run ./cmd/kartographer-mcp -dir /path/to/module
 ```
 
-Register it in an MCP client as a stdio server with the command above. The index is built once at startup from
-resolved call edges (Go SSA with VTA). `strict_calls` and `code_only` are accepted for compatibility and have no
-effect yet.
+Register it in an MCP client as a stdio server with the command above. The index is built once at startup.
+
+- Go modules (a `go.mod` in the root) are analysed with SSA and VTA.
+- Other languages are analysed by a language server from `lsp/registry.yaml`, when one is on `PATH`. Languages with
+  no installed server are listed in the index as missing, not dropped silently. Symbols are named
+  `path/to/file::Outer.name`.
+- Calls come from the server's incoming-call hierarchy. Servers without it still report functions, without edges.
+- `strict_calls` and `code_only` are accepted for compatibility and have no effect yet.
+- Verified locally with gopls, clangd, rust-analyzer and sourcekit-lsp. The other registry entries are not yet run.
