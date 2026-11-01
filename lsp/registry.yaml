@@ -1,0 +1,43 @@
+# Language servers the code graph uses for languages other than Go. For each
+# language the first server whose command is on PATH is used. Each server is a
+# command and its arguments.
+languages:
+  - id: c
+    extensions: [.c, .h]
+    servers: [[clangd]]
+  - id: cpp
+    extensions: [.cc, .cpp, .cxx, .hh, .hpp]
+    servers: [[clangd]]
+  - id: python
+    extensions: [.py]
+    servers: [[pyright-langserver, --stdio], [pylsp]]
+  - id: typescript
+    extensions: [.ts, .tsx, .js, .jsx, .mjs, .cjs]
+    servers: [[typescript-language-server, --stdio]]
+  - id: rust
+    extensions: [.rs]
+    servers: [[rust-analyzer]]
+  - id: java
+    extensions: [.java]
+    servers: [[jdtls]]
+  - id: ruby
+    extensions: [.rb]
+    servers: [[solargraph, stdio]]
+  - id: swift
+    extensions: [.swift]
+    servers: [[sourcekit-lsp]]
+  - id: csharp
+    extensions: [.cs]
+    servers: [[OmniSharp, -lsp]]
+  - id: php
+    extensions: [.php]
+    servers: [[intelephense, --stdio]]
+  - id: lua
+    extensions: [.lua]
+    servers: [[lua-language-server]]
+  - id: kotlin
+    extensions: [.kt, .kts]
+    servers: [[kotlin-language-server]]
+  - id: bash
+    extensions: [.sh]
+    servers: [[bash-language-server, start]]
