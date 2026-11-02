@@ -54,8 +54,8 @@ func TestCreatePipe(t *testing.T) {
 	if r == nil || w == nil {
 		t.Error("Expected valid pipe files")
 	}
-	r.Close()
-	w.Close()
+	_ = r.Close()
+	_ = w.Close()
 }
 
 // MockPipeCreator for testing error conditions
@@ -89,6 +89,6 @@ func TestCreatePipeWithCreator_Success(t *testing.T) {
 	if r == nil || w == nil {
 		t.Error("Expected valid pipe files")
 	}
-	r.Close()
-	w.Close()
+	_ = r.Close()
+	_ = w.Close()
 }
