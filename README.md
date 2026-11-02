@@ -255,7 +255,10 @@ a symbol is. They are not semantic search, so use specific words from the code.
 go run ./cmd/kartographer-mcp -dir /path/to/module
 ```
 
-Register it in an MCP client as a stdio server with the command above. The index is built once at startup.
+Register it in an MCP client as a stdio server with the command above. The index is saved under the user cache
+directory (`kartographer/index`) and reused until a file under the module changes (its path, size or modification
+time). Pass `-no-cache` to rebuild. The saved index depends on the module's own files only, so a change in a
+dependency's source is not noticed until a module file also changes.
 
 - Go modules (a `go.mod` in the root) are analysed with SSA and VTA.
 - Other languages are analysed by a language server from `lsp/registry.yaml`, when one is on `PATH`. Languages with

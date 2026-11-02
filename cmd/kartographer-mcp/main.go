@@ -17,9 +17,10 @@ const version = "0.3.0"
 
 func main() {
 	dir := flag.String("dir", ".", "module root to index")
+	noCache := flag.Bool("no-cache", false, "rebuild the index instead of reusing the saved one")
 	flag.Parse()
 
-	ix, err := codegraph.Build(*dir)
+	ix, err := load(*dir, *noCache)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "kartographer-mcp:", err)
 		os.Exit(1)
@@ -32,4 +33,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, "kartographer-mcp:", err)
 		os.Exit(1)
 	}
+}
+
+// load returns the index of dir, from the saved copy unless noCache is set.
+func load(dir string, noCache bool) (*codegraph.Index, error) {
+	if noCache {
+		return codegraph.Build(dir)
+	}
+	cache, err := codegraph.CacheDir()
+	if err != nil {
+		return nil, err
+	}
+	return codegraph.BuildCached(dir, cache)
 }
