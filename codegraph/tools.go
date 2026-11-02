@@ -8,20 +8,6 @@ import (
 )
 
 // Default result limits, for the tools.
-const (
-	findLimit      = 30
-	callerLimit    = 25
-	calleeLimit    = 25
-	impactLimit    = 60
-	impactSeeds    = 8
-	testsForLimit  = 25
-	rankLimit      = 15
-	neighborLimit  = 50
-	queryBudget    = 5000
-	queryK         = 5
-	maxResultLimit = 300
-)
-
 // Tools returns the code graph tools under stable names.
 //
 // strict_calls and code_only are accepted for compatibility. The index holds
@@ -34,7 +20,7 @@ func Tools(ix *Index) []mcp.Tool {
 func tierOneTools(ix *Index) []mcp.Tool {
 	symbolArg := map[string]any{"type": "string", "description": "Symbol name, e.g. 'Type.Method' or 'pkg.Func'."}
 	limitArg := func(def int) map[string]any {
-		return map[string]any{"type": "integer", "minimum": 1, "maximum": maxResultLimit, "default": def}
+		return map[string]any{"type": "integer", "minimum": 1, "maximum": rules.Limits.MaxResult, "default": def}
 	}
 	strictArg := map[string]any{"type": "boolean", "default": true, "description": "Accepted for compatibility; only resolved calls are indexed."}
 	return []mcp.Tool{
@@ -44,7 +30,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			InputSchema: schema(map[string]any{
 				"term":      map[string]any{"type": "string", "description": "Substring of the symbol name."},
 				"code_only": map[string]any{"type": "boolean", "default": false, "description": "Accepted for compatibility; every node is code."},
-				"limit":     limitArg(findLimit),
+				"limit":     limitArg(rules.Limits.FindSymbol),
 			}, "term"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -57,7 +43,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if a.Term == "" {
 					return "", fmt.Errorf("term is required")
 				}
-				return render(ix.Find(a.Term, pick(a.Limit, findLimit)), nil)
+				return render(ix.Find(a.Term, pick(a.Limit, rules.Limits.FindSymbol)), nil)
 			},
 		},
 		{
@@ -66,7 +52,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			InputSchema: schema(map[string]any{
 				"symbol":       symbolArg,
 				"strict_calls": strictArg,
-				"limit":        limitArg(callerLimit),
+				"limit":        limitArg(rules.Limits.Callers),
 			}, "symbol"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -76,7 +62,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if err := json.Unmarshal(raw, &a); err != nil {
 					return "", err
 				}
-				found, err := ix.Callers(a.Symbol, pick(a.Limit, callerLimit))
+				found, err := ix.Callers(a.Symbol, pick(a.Limit, rules.Limits.Callers))
 				if err != nil {
 					return "", err
 				}
@@ -89,7 +75,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			InputSchema: schema(map[string]any{
 				"symbol":       symbolArg,
 				"strict_calls": strictArg,
-				"limit":        limitArg(calleeLimit),
+				"limit":        limitArg(rules.Limits.Callees),
 			}, "symbol"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -99,7 +85,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if err := json.Unmarshal(raw, &a); err != nil {
 					return "", err
 				}
-				found, err := ix.Callees(a.Symbol, pick(a.Limit, calleeLimit))
+				found, err := ix.Callees(a.Symbol, pick(a.Limit, rules.Limits.Callees))
 				if err != nil {
 					return "", err
 				}
@@ -111,8 +97,8 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			Description: "Direct callers and callees of a symbol: a bounded first-pass scope for a change.",
 			InputSchema: schema(map[string]any{
 				"target":    symbolArg,
-				"max_seeds": map[string]any{"type": "integer", "minimum": 1, "maximum": 30, "default": impactSeeds},
-				"limit":     limitArg(impactLimit),
+				"max_seeds": map[string]any{"type": "integer", "minimum": 1, "maximum": 30, "default": rules.Limits.ImpactSeeds},
+				"limit":     limitArg(rules.Limits.Impact),
 			}, "target"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -122,7 +108,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if err := json.Unmarshal(raw, &a); err != nil {
 					return "", err
 				}
-				found, err := ix.Neighbours(a.Target, pick(a.Limit, impactLimit))
+				found, err := ix.Neighbours(a.Target, pick(a.Limit, rules.Limits.Impact))
 				if err != nil {
 					return "", err
 				}
@@ -134,7 +120,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			Description: "Test functions that reach a symbol or a file through callers.",
 			InputSchema: schema(map[string]any{
 				"target": map[string]any{"type": "string", "description": "A symbol name, or a module-relative file path."},
-				"limit":  limitArg(testsForLimit),
+				"limit":  limitArg(rules.Limits.TestsFor),
 			}, "target"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -144,7 +130,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if err := json.Unmarshal(raw, &a); err != nil {
 					return "", err
 				}
-				found, err := ix.TestsFor(a.Target, pick(a.Limit, testsForLimit))
+				found, err := ix.TestsFor(a.Target, pick(a.Limit, rules.Limits.TestsFor))
 				if err != nil {
 					return "", err
 				}
@@ -156,7 +142,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			Description: "Rank the files that match a question by the symbols in them. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"question": map[string]any{"type": "string", "description": "A question or a few keywords."},
-				"limit":    limitArg(rankLimit),
+				"limit":    limitArg(rules.Limits.RankFiles),
 			}, "question"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -169,7 +155,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if a.Question == "" {
 					return "", fmt.Errorf("question is required")
 				}
-				hits := ix.RankFiles(a.Question, pick(a.Limit, rankLimit))
+				hits := ix.RankFiles(a.Question, pick(a.Limit, rules.Limits.RankFiles))
 				rows := make([]map[string]any, 0, len(hits))
 				for _, h := range hits {
 					rows = append(rows, map[string]any{"file": h.Symbol.File, "score": h.Score})
@@ -183,8 +169,8 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			Description: "Find the symbols that match a question, with their source text cut to a budget. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"question": map[string]any{"type": "string", "description": "A question or a few keywords."},
-				"budget":   map[string]any{"type": "integer", "minimum": 500, "maximum": 50000, "default": queryBudget, "description": "Approximate characters of source to return."},
-				"k":        map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": queryK},
+				"budget":   map[string]any{"type": "integer", "minimum": 500, "maximum": 50000, "default": rules.Limits.QueryBudget, "description": "Approximate characters of source to return."},
+				"k":        map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": rules.Limits.QueryK},
 				"skeleton": map[string]any{"type": "boolean", "default": false, "description": "Return locations only, without source."},
 			}, "question"),
 			Handle: func(raw json.RawMessage) (string, error) {
@@ -200,7 +186,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if a.Question == "" {
 					return "", fmt.Errorf("question is required")
 				}
-				hits := ix.Query(a.Question, pick(a.K, queryK), max(a.Budget, 500), a.Skeleton)
+				hits := ix.Query(a.Question, pick(a.K, rules.Limits.QueryK), max(a.Budget, 500), a.Skeleton)
 				rows := make([]map[string]any, 0, len(hits))
 				for _, h := range hits {
 					row := map[string]any{"name": h.Symbol.Name, "file": h.Symbol.File, "line": h.Symbol.Line, "score": h.Score}
@@ -218,7 +204,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			Description: "A file's dependencies (files it calls into) and dependents (files that call into it), from the call graph.",
 			InputSchema: schema(map[string]any{
 				"file":         map[string]any{"type": "string", "description": "Module-relative file path."},
-				"limit":        limitArg(neighborLimit),
+				"limit":        limitArg(rules.Limits.FileNeighbors),
 				"symbols_only": map[string]any{"type": "boolean", "default": false, "description": "Return the file's symbols only."},
 			}, "file"),
 			Handle: func(raw json.RawMessage) (string, error) {
@@ -236,7 +222,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if a.SymbolsOnly {
 					return render(ix.FileSymbols(a.File), nil)
 				}
-				deps, users := ix.FileNeighbors(a.File, pick(a.Limit, neighborLimit))
+				deps, users := ix.FileNeighbors(a.File, pick(a.Limit, rules.Limits.FileNeighbors))
 				b, err := json.Marshal(map[string]any{"dependencies": deps, "dependents": users})
 				return string(b), err
 			},
@@ -275,7 +261,7 @@ func schema(props map[string]any, required ...string) map[string]any {
 
 // pick returns n when it is a valid limit, else def.
 func pick(n, def int) int {
-	if n < 1 || n > maxResultLimit {
+	if n < 1 || n > rules.Limits.MaxResult {
 		return def
 	}
 	return n

@@ -8,13 +8,6 @@ import (
 	"github.com/kdeps/kartographer/mcp"
 )
 
-const (
-	recallLimit   = 10
-	aboutLimit    = 5
-	impactFiles   = 15
-	fetchMaxBytes = 16 * 1024
-)
-
 // Tier3Tools are the memory, workspace, risk and fetch tools. Notes are local (see package notes). Workspaces are one: this module.
 // Options that only the hosted memory service has (profiles, sufficiency,
 // grounding, time filters) are accepted and ignored. fetch takes a symbol name,
@@ -49,7 +42,7 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 			Description: "Notes that share words with a query, best match first. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"query": map[string]any{"type": "string"},
-				"k":     map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": recallLimit},
+				"k":     map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": rules.Limits.Recall},
 			}, "query"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -62,7 +55,7 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 				if a.Query == "" {
 					return "", fmt.Errorf("query is required")
 				}
-				found, err := ix.Notes.Search(a.Query, pick(a.K, recallLimit))
+				found, err := ix.Notes.Search(a.Query, pick(a.K, rules.Limits.Recall))
 				if err != nil {
 					return "", err
 				}
@@ -75,7 +68,7 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 			Description: "Notes that mention a file path or a symbol name.",
 			InputSchema: schema(map[string]any{
 				"target": map[string]any{"type": "string", "description": "A module-relative file path or a symbol name."},
-				"k":      map[string]any{"type": "integer", "minimum": 1, "maximum": 20, "default": aboutLimit},
+				"k":      map[string]any{"type": "integer", "minimum": 1, "maximum": 20, "default": rules.Limits.MemoriesAbout},
 			}, "target"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -88,7 +81,7 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 				if a.Target == "" {
 					return "", fmt.Errorf("target is required")
 				}
-				found, err := ix.Notes.About(a.Target, pick(a.K, aboutLimit))
+				found, err := ix.Notes.About(a.Target, pick(a.K, rules.Limits.MemoriesAbout))
 				if err != nil {
 					return "", err
 				}
@@ -133,7 +126,7 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 			Description: "Files ranked by how many symbols a change to the target touches, with the tests that reach the target. Static, not a verdict.",
 			InputSchema: schema(map[string]any{
 				"target": map[string]any{"type": "string", "description": "A symbol name."},
-				"limit":  map[string]any{"type": "integer", "minimum": 1, "maximum": 300, "default": impactFiles},
+				"limit":  map[string]any{"type": "integer", "minimum": 1, "maximum": 300, "default": rules.Limits.ImpactFiles},
 			}, "target"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -143,7 +136,7 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 				if err := json.Unmarshal(raw, &a); err != nil {
 					return "", err
 				}
-				files, tests, err := ix.ImpactRisk(a.Target, pick(a.Limit, impactFiles))
+				files, tests, err := ix.ImpactRisk(a.Target, pick(a.Limit, rules.Limits.ImpactFiles))
 				if err != nil {
 					return "", err
 				}
@@ -168,8 +161,8 @@ func Tier3Tools(ix *Index) []mcp.Tool {
 				if err != nil {
 					return "", err
 				}
-				if len(body) > fetchMaxBytes {
-					body = body[:fetchMaxBytes]
+				if len(body) > rules.Limits.FetchBytes {
+					body = body[:rules.Limits.FetchBytes]
 				}
 				b, err := json.Marshal(map[string]any{"name": sym.Name, "file": sym.File, "line": sym.Line, "body": body})
 				return string(b), err

@@ -3,11 +3,6 @@ package codegraph
 import "sort"
 
 // Limits for path and neighbourhood queries.
-const (
-	maxPathDepth = 8
-	maxPaths     = 10
-)
-
 // Trace returns up to k simple directed call paths from src to tgt, shortest
 // first. Each path lists symbol names from src to tgt.
 func (ix *Index) Trace(src, tgt string, k int) ([][]string, error) {
@@ -19,11 +14,11 @@ func (ix *Index) Trace(src, tgt string, k int) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	k = min(max(k, 1), maxPaths)
+	k = min(max(k, 1), rules.Paths.MaxPaths)
 	var paths [][]string
 	var walk func(cur string, path []string, on map[string]bool)
 	walk = func(cur string, path []string, on map[string]bool) {
-		if len(paths) >= k || len(path) > maxPathDepth {
+		if len(paths) >= k || len(path) > rules.Paths.MaxDepth {
 			return
 		}
 		if cur == to {

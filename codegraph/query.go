@@ -8,23 +8,9 @@ import (
 	"unicode"
 )
 
-// Keyword ranking: a symbol scores for each query word its name contains
-// (weight 3) or its file path contains (weight 1), plus a small bonus for
-// how connected it is. It is a lexical match, not a semantic one.
-const (
-	nameWeight   = 3.0
-	pathWeight   = 1.0
-	degreeWeight = 0.1
-	bodyLines    = 30
-)
-
-//nolint:gochecknoglobals // fixed list
-var stopwords = map[string]bool{
-	"the": true, "a": true, "an": true, "of": true, "is": true, "are": true, "where": true,
-	"how": true, "what": true, "which": true, "does": true, "do": true, "in": true, "to": true,
-	"and": true, "or": true, "for": true, "on": true, "with": true, "by": true, "it": true,
-	"this": true, "that": true, "be": true, "when": true, "who": true,
-}
+// Keyword ranking: a symbol scores for each query word its name or file path
+// contains, weighted by rules.yaml, plus a bonus for how connected it is. It is
+// a lexical match, not a semantic one.
 
 // Hit is a symbol that matched a question, with its source when requested.
 type Hit struct {
@@ -54,17 +40,17 @@ func (ix *Index) score(sym Symbol, words []string) float64 {
 	var total float64
 	for _, w := range words {
 		if strings.Contains(name, w) {
-			total += nameWeight
+			total += rules.Ranking.NameWeight
 		}
 		if strings.Contains(path, w) {
-			total += pathWeight
+			total += rules.Ranking.PathWeight
 		}
 	}
 	if total == 0 {
 		return 0
 	}
 	degree := float64(len(ix.callers[sym.Name]) + len(ix.deps.NodeDependencies[sym.Name]))
-	return total + degreeWeight*degree
+	return total + rules.Ranking.DegreeWeight*degree
 }
 
 // Query returns the k best-matching symbols for question, with their source
@@ -159,7 +145,7 @@ func (ix *Index) body(sym Symbol) string {
 	if start < 0 || start >= len(lines) {
 		return ""
 	}
-	end := min(start+bodyLines, len(lines))
+	end := min(start+rules.Ranking.BodyLines, len(lines))
 	return strings.Join(lines[start:end], "\n")
 }
 

@@ -7,14 +7,6 @@ import (
 	"github.com/kdeps/kartographer/mcp"
 )
 
-const (
-	nodeNeighbours = 12
-	seedLimit      = 10
-	renderDepth    = 1
-	renderNodes    = 300
-	renderEdges    = 4000
-)
-
 // Tier2Tools are the path, neighbourhood and source tools.
 // references and imports_exports are not served: they need
 // non-call references and import statements, which the index does not store.
@@ -27,7 +19,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			InputSchema: schema(map[string]any{
 				"symbol":       symbolArg,
 				"strict_calls": map[string]any{"type": "boolean", "default": false, "description": "Accepted for compatibility; only resolved calls are indexed."},
-				"limit":        map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": nodeNeighbours},
+				"limit":        map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": rules.Limits.NodeNeighbours},
 			}, "symbol"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -37,7 +29,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 				if err := json.Unmarshal(raw, &a); err != nil {
 					return "", err
 				}
-				sym, body, neigh, err := ix.Node(a.Symbol, pick(a.Limit, nodeNeighbours))
+				sym, body, neigh, err := ix.Node(a.Symbol, pick(a.Limit, rules.Limits.NodeNeighbours))
 				if err != nil {
 					return "", err
 				}
@@ -122,7 +114,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			Description: "The top symbols for a question, without their source. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"question": map[string]any{"type": "string"},
-				"limit":    map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": seedLimit},
+				"limit":    map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": rules.Limits.FindSeeds},
 			}, "question"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -135,7 +127,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 				if a.Question == "" {
 					return "", fmt.Errorf("question is required")
 				}
-				return render(symbolsOf(ix.Query(a.Question, pick(a.Limit, seedLimit), 0, true)), nil)
+				return render(symbolsOf(ix.Query(a.Question, pick(a.Limit, rules.Limits.FindSeeds), 0, true)), nil)
 			},
 		},
 		{
@@ -154,7 +146,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 				if a.Query == "" {
 					return "", fmt.Errorf("query is required")
 				}
-				return render(ix.Find(a.Query, maxResultLimit), nil)
+				return render(ix.Find(a.Query, rules.Limits.MaxResult), nil)
 			},
 		},
 		{
@@ -162,9 +154,9 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			Description: "The nodes and call edges around seed symbols, for drawing a graph.",
 			InputSchema: schema(map[string]any{
 				"seeds":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
-				"depth":      map[string]any{"type": "integer", "minimum": 1, "maximum": 3, "default": renderDepth},
-				"node_limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 2000, "default": renderNodes},
-				"edge_limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 20000, "default": renderEdges},
+				"depth":      map[string]any{"type": "integer", "minimum": 1, "maximum": 3, "default": rules.Limits.RenderDepth},
+				"node_limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 2000, "default": rules.Limits.RenderNodes},
+				"edge_limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 20000, "default": rules.Limits.RenderEdges},
 			}, "seeds"),
 			Handle: func(raw json.RawMessage) (string, error) {
 				var a struct {
@@ -179,8 +171,8 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 				if len(a.Seeds) == 0 {
 					return "", fmt.Errorf("seeds is required")
 				}
-				nodes, edges := ix.Neighbourhood(a.Seeds, pick(a.Depth, renderDepth), pick(a.NodeLimit, renderNodes))
-				if limit := pick(a.EdgeLimit, renderEdges); len(edges) > limit {
+				nodes, edges := ix.Neighbourhood(a.Seeds, pick(a.Depth, rules.Limits.RenderDepth), pick(a.NodeLimit, rules.Limits.RenderNodes))
+				if limit := pick(a.EdgeLimit, rules.Limits.RenderEdges); len(edges) > limit {
 					edges = edges[:limit]
 				}
 				links := make([]map[string]string, 0, len(edges))
