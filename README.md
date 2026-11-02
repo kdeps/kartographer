@@ -86,7 +86,7 @@ Serves the code graph over stdio MCP. The tools are:
 
 ## Communities
 
-`community.Leiden(n, edges)` groups the nodes of a weighted undirected graph, and returns each node's community and the partition's modularity. It is the Leiden method: after each pass, every community is split into its connected parts, so no community holds nodes that cannot reach each other inside it. `community.Detect` is the same procedure without that split (Louvain). Both are deterministic.
+`community.Leiden(n, edges)` groups the nodes of a weighted undirected graph, and returns each node's community and the partition's modularity. It adds the connectivity step of the Leiden method: after each pass, every community is split into its connected parts, so no community holds nodes that cannot reach each other inside it. The full Leiden method also refines partitions before aggregating, which this does not do. `community.Detect` is the same procedure without that split (Louvain). Both are deterministic.
 
 ## Dependency graph package
 
