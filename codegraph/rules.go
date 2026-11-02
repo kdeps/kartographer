@@ -43,6 +43,10 @@ type rulesFile struct {
 	Paths struct {
 		MaxDepth int `yaml:"max_depth"`
 		MaxPaths int `yaml:"max_paths"`
+		// SkipDirs are folder names the Go file listing never enters.
+		SkipDirs []string `yaml:"skip_dirs"`
+		// SkipHidden skips folders whose names start with a dot.
+		SkipHidden bool `yaml:"skip_hidden"`
 	} `yaml:"paths"`
 }
 
