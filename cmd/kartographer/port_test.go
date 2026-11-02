@@ -100,6 +100,7 @@ func TestWatchRebuildsAfterAChange(t *testing.T) {
 }
 
 func TestExportGraphMLIsWellFormed(t *testing.T) {
+	configureRules(t)
 	var out bytes.Buffer
 	require.NoError(t, exportCommand(&out, "graphml", "", fixture, true))
 	assert.Contains(t, out.String(), `<node id="example.com/fx/pkg.leaf">`)
@@ -118,6 +119,7 @@ func TestExportGraphMLIsWellFormed(t *testing.T) {
 }
 
 func TestExportWritesFileAndRejectsOtherFormats(t *testing.T) {
+	configureRules(t)
 	path := filepath.Join(t.TempDir(), "g.graphml")
 	var out bytes.Buffer
 	require.NoError(t, exportCommand(&out, "graphml", path, fixture, true))
@@ -126,7 +128,7 @@ func TestExportWritesFileAndRejectsOtherFormats(t *testing.T) {
 	assert.Contains(t, string(raw), "<graphml")
 	assert.Contains(t, out.String(), "wrote "+path)
 
-	assert.ErrorContains(t, exportCommand(&out, "html", "", fixture, true), "export supports graphml")
+	assert.ErrorContains(t, exportCommand(&out, "pdf", "", fixture, true), "export supports")
 }
 
 func TestPortedCommandsThroughRun(t *testing.T) {

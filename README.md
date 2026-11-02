@@ -287,8 +287,13 @@ kartographer -rules rules.yaml affected "leaf" --depth 2     # symbols that depe
 kartographer -rules rules.yaml watch [dir] [-interval 2s]     # rebuild when files change
 kartographer -rules rules.yaml hook install                  # rebuild after commits and checkouts
 kartographer -rules rules.yaml hook uninstall|status
-kartographer -rules rules.yaml export graphml [-o FILE]      # the call graph as GraphML
+kartographer -rules rules.yaml export graphml [-o FILE]      # graphml, html, svg, neo4j, falkordb: file or stdout
+kartographer -rules rules.yaml export obsidian -o vault/    # one note per symbol, linked by calls
+kartographer -rules rules.yaml export wiki -o site/         # index plus one page per file
+kartographer -rules rules.yaml add "https://example.com/a"  # fetch a page into ./raw (--dir-raw, --author, --contributor)
 ```
+
+`add` takes `--dir-raw` rather than Graphify's `--dir`, because `-dir` selects the module root.
 
 `query` takes `--k`, `--budget` and `--skeleton`. The git hooks rebuild only when `KARTOGRAPHER_RULES` is set to the
 rules file path; they never guess one. Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
