@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/kdeps/kartographer/store"
 )
 
 // cacheVersion changes when the saved format or the analysis changes.
@@ -85,7 +87,7 @@ func Fingerprint(root string) (string, error) {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(h, "%s\x00%d\x00%d\n", p, info.Size(), info.ModTime().UnixNano())
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00%d\n", p, info.Size(), info.ModTime().UnixNano())
 		return nil
 	})
 	if err != nil {
@@ -115,9 +117,6 @@ func loadSnapshot(file, fp, root string) (*Index, bool) {
 
 // saveSnapshot writes the index to file, creating its directory.
 func saveSnapshot(file, fp string, ix *Index) error {
-	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
-		return err
-	}
 	deps := map[string][]string{}
 	for name := range ix.Symbols {
 		deps[name] = ix.deps.NodeDependencies[name]
@@ -128,15 +127,11 @@ func saveSnapshot(file, fp string, ix *Index) error {
 			inferred[from] = append(inferred[from], to)
 		}
 	}
-	raw, err := json.Marshal(snapshot{
+	return store.WriteJSON(file, snapshot{
 		Version: cacheVersion, Fingerprint: fp, Module: ix.Module,
 		Symbols: ix.Symbols, Missing: ix.Missing, Deps: deps, Refs: ix.refs,
 		Inferred: inferred,
 	})
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(file, raw, 0o600)
 }
 
 // CacheDir is the default directory for saved indexes.

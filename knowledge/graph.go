@@ -135,6 +135,12 @@ func (b *Builder) Graph() *Graph {
 // graph's Communities and Modularity. weight gives each edge's strength in the
 // grouping. It returns the modularity.
 func Communities(g *Graph, weight func(*Edge) float64) float64 {
+	return CommunitiesWith(g, weight, community.Detect)
+}
+
+// CommunitiesWith is Communities with the detector the caller chooses, such as
+// one from community.Method.
+func CommunitiesWith(g *Graph, weight func(*Edge) float64, detect community.Detector) float64 {
 	n := len(g.Nodes)
 	if n == 0 {
 		return 0
@@ -161,7 +167,7 @@ func Communities(g *Graph, weight func(*Edge) float64) float64 {
 		}
 		edges = append(edges, community.Edge{From: a, To: b, Weight: weight(e)})
 	}
-	assign, q := community.Detect(n, edges)
+	assign, q := detect(n, edges)
 	seen := map[int]bool{}
 	for p, i := range order {
 		g.Nodes[i].Community = assign[p]
