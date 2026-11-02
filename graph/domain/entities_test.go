@@ -5,7 +5,7 @@ import "testing"
 func TestNewNode(t *testing.T) {
 	deps := []string{"dep1", "dep2"}
 	node := NewNode("test-id", deps)
-	
+
 	if node.ID != "test-id" {
 		t.Errorf("Expected ID to be 'test-id', got %s", node.ID)
 	}
@@ -20,7 +20,7 @@ func TestNewNode(t *testing.T) {
 func TestNewPath(t *testing.T) {
 	nodes := []string{"A", "B", "C"}
 	path := NewPath(nodes, "forward")
-	
+
 	if len(path.Nodes) != 3 {
 		t.Errorf("Expected 3 nodes, got %d", len(path.Nodes))
 	}
@@ -31,7 +31,7 @@ func TestNewPath(t *testing.T) {
 
 func TestNewGraphTraversal(t *testing.T) {
 	traversal := NewGraphTraversal()
-	
+
 	if traversal.VisitedNodes == nil {
 		t.Error("Expected VisitedNodes to be initialized")
 	}

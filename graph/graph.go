@@ -2,10 +2,10 @@ package graph
 
 import (
 	"github.com/charmbracelet/log"
-	"github.com/spf13/afero"
 	"github.com/kdeps/kartographer/graph/domain"
 	"github.com/kdeps/kartographer/graph/infrastructure"
 	"github.com/kdeps/kartographer/graph/usecase"
+	"github.com/spf13/afero"
 )
 
 type DependencyGraph struct {

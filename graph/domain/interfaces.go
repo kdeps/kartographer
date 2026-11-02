@@ -19,7 +19,7 @@ type DependencyService interface {
 	ListRecursiveDependencies(nodeID string) []string
 	ListReverseDependencies(nodeID string) []string
 	BuildDependencyStack(nodeID string) []string
-	TraverseGraph(nodeID string) 
+	TraverseGraph(nodeID string)
 }
 
 type PathService interface {

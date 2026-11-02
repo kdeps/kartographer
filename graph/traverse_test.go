@@ -62,6 +62,6 @@ func TestTraverseDependencyGraph_VisitedPath(t *testing.T) {
 	dg := NewDependencyGraph(fs, logger, dependencies)
 	dg.VisitedPaths["A"] = true
 	visited := make(map[string]bool)
-	
+
 	dg.TraverseDependencyGraph("A", dependencies, visited)
 }

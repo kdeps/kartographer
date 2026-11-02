@@ -1,9 +1,9 @@
 package usecase
 
 import (
-	"testing"
 	"github.com/kdeps/kartographer/graph/domain"
 	"github.com/kdeps/kartographer/graph/infrastructure"
+	"testing"
 )
 
 func TestNewDependencyService(t *testing.T) {
@@ -12,7 +12,7 @@ func TestNewDependencyService(t *testing.T) {
 	formatter := infrastructure.NewArrowPathFormatter()
 	writer := &mockOutputWriter{}
 	pathSvc := NewPathService(formatter, writer)
-	
+
 	service := NewDependencyService(repo, pathSvc)
 	if service == nil {
 		t.Error("Expected service to be created")
@@ -25,12 +25,12 @@ func TestListDirectDependencies(t *testing.T) {
 		"B": {"D"},
 	}
 	service := createTestService(deps)
-	
+
 	result := service.ListDirectDependencies("A")
 	if len(result) != 2 {
 		t.Errorf("Expected 2 dependencies, got %d", len(result))
 	}
-	
+
 	result = service.ListDirectDependencies("NONEXISTENT")
 	if len(result) != 0 {
 		t.Errorf("Expected 0 dependencies for non-existent node, got %d", len(result))
@@ -61,7 +61,7 @@ func TestListRecursiveDependencies(t *testing.T) {
 		"D": {},
 	}
 	service := createTestService(deps)
-	
+
 	result := service.ListRecursiveDependencies("A")
 	if len(result) < 2 {
 		t.Errorf("Expected at least 2 recursive dependencies, got %d", len(result))
@@ -74,7 +74,7 @@ func TestListReverseDependencies(t *testing.T) {
 		"C": {"B"},
 	}
 	service := createTestService(deps)
-	
+
 	result := service.ListReverseDependencies("B")
 	if len(result) != 2 {
 		t.Errorf("Expected 2 reverse dependencies, got %d", len(result))
@@ -88,7 +88,7 @@ func TestBuildDependencyStack(t *testing.T) {
 		"C": {},
 	}
 	service := createTestService(deps)
-	
+
 	result := service.BuildDependencyStack("A")
 	if len(result) != 3 {
 		t.Errorf("Expected 3 items in stack, got %d", len(result))
@@ -104,14 +104,14 @@ func TestTraverseGraph(t *testing.T) {
 		"B": {},
 	}
 	service := createTestService(deps)
-	
+
 	service.TraverseGraph("A")
 }
 
 func TestListRecursiveDependencies_NonExistent(t *testing.T) {
 	deps := map[string][]string{"A": {"B"}}
 	service := createTestService(deps)
-	
+
 	result := service.ListRecursiveDependencies("NONEXISTENT")
 	if len(result) != 0 {
 		t.Errorf("Expected 0 dependencies for non-existent node, got %d", len(result))
@@ -121,7 +121,7 @@ func TestListRecursiveDependencies_NonExistent(t *testing.T) {
 func TestListReverseDependencies_NonExistent(t *testing.T) {
 	deps := map[string][]string{"A": {"B"}}
 	service := createTestService(deps)
-	
+
 	result := service.ListReverseDependencies("NONEXISTENT")
 	if len(result) != 0 {
 		t.Errorf("Expected 0 reverse dependencies for non-existent node, got %d", len(result))
@@ -131,7 +131,7 @@ func TestListReverseDependencies_NonExistent(t *testing.T) {
 func TestBuildDependencyStack_Visited(t *testing.T) {
 	deps := map[string][]string{"A": {"A"}}
 	service := createTestService(deps)
-	
+
 	result := service.BuildDependencyStack("A")
 	if len(result) != 1 {
 		t.Errorf("Expected 1 item in stack for self-reference, got %d", len(result))
@@ -141,7 +141,7 @@ func TestBuildDependencyStack_Visited(t *testing.T) {
 func TestTraverseGraph_Visited(t *testing.T) {
 	deps := map[string][]string{"A": {"A"}}
 	service := createTestService(deps)
-	
+
 	service.TraverseGraph("A")
 }
 
@@ -153,7 +153,7 @@ func TestTraverseGraph_VisitedPath(t *testing.T) {
 	}
 	service := createTestService(deps).(*DependencyServiceImpl)
 	service.traversal.VisitedPaths["A -> B"] = true
-	
+
 	service.TraverseGraph("A")
 }
 
@@ -164,14 +164,14 @@ func TestTraverseNode_VisitedPath(t *testing.T) {
 	}
 	service := createTestService(deps).(*DependencyServiceImpl)
 	service.traversal = domain.NewGraphTraversal()
-	
+
 	// First, traverse to create the path
 	service.traverseNode("A")
-	
+
 	// Reset and set up the visited path scenario
 	service.traversal = domain.NewGraphTraversal()
 	service.traversal.VisitedPaths["A"] = true
-	
+
 	// This should hit the visited path condition
 	service.traverseNode("A")
 }
