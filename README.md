@@ -84,6 +84,10 @@ Serves the code graph over stdio MCP. The tools are:
 
 `lsp/registry.yaml` lists 13 languages, from C and C++ to Swift and C#. The first server on PATH for a language is used.
 
+## Communities
+
+`community.Leiden(n, edges)` groups the nodes of a weighted undirected graph, and returns each node's community and the partition's modularity. It is the Leiden method: after each pass, every community is split into its connected parts, so no community holds nodes that cannot reach each other inside it. `community.Detect` is the same procedure without that split (Louvain). Both are deterministic.
+
 ## Dependency graph package
 
 The `graph` package is a separate, lower-level library: a dependency graph over string keys, with direct, recursive, top-down, reverse and stack-based traversals. It does not read source code.
