@@ -6,6 +6,7 @@ package codegraph
 import (
 	"errors"
 	"fmt"
+	"go/ast"
 	"os"
 	"path/filepath"
 	"sort"
@@ -33,6 +34,7 @@ type Symbol struct {
 	Name     string // full name, e.g. "example.com/m/pkg.(*T).Method" or "src/app.py::Login.run"
 	File     string // path relative to the module root
 	Line     int
+	End      int    // last line of the declaration, 0 when unknown
 	Language string // "go", or the registry id of a language server
 	IsTest   bool   // defined in a test file
 }
@@ -134,6 +136,10 @@ func indexGo(root string, idx *Index, deps map[string][]string) error {
 		}
 		name := displayName(fn)
 		p := prog.Fset.Position(fn.Pos())
+		end := 0
+		if decl, ok := fn.Syntax().(*ast.FuncDecl); ok {
+			end = prog.Fset.Position(decl.End()).Line
+		}
 		if !strings.HasPrefix(p.Filename, root+string(filepath.Separator)) {
 			continue // generated code, e.g. the test main in the build cache
 		}
@@ -142,6 +148,7 @@ func indexGo(root string, idx *Index, deps map[string][]string) error {
 			Name:     name,
 			File:     rel,
 			Line:     p.Line,
+			End:      end,
 			Language: "go",
 			IsTest:   strings.HasSuffix(rel, "_test.go"),
 		}
@@ -194,7 +201,7 @@ func indexServers(root string, idx *Index, deps map[string][]string) error {
 			return fmt.Errorf("%s: %w", id, err)
 		}
 		for _, f := range res.Funcs {
-			idx.Symbols[f.Key] = Symbol{Name: f.Key, File: f.File, Line: f.Line, Language: id, IsTest: isTestFile(f.File)}
+			idx.Symbols[f.Key] = Symbol{Name: f.Key, File: f.File, Line: f.Line, End: f.End, Language: id, IsTest: isTestFile(f.File)}
 			deps[f.Key] = res.Calls[f.Key]
 		}
 		mergeRefs(idx, res.Refs)

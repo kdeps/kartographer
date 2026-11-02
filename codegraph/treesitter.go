@@ -34,7 +34,7 @@ func indexTreeSitter(root, id string, files []string, idx *Index, deps map[strin
 			if _, taken := idx.Symbols[key]; taken {
 				key = fmt.Sprintf("%s@%d", key, f.Line)
 			}
-			idx.Symbols[key] = Symbol{Name: key, File: rel, Line: f.Line, Language: id, IsTest: isTestFile(rel)}
+			idx.Symbols[key] = Symbol{Name: key, File: rel, Line: f.Line, End: f.EndLine, Language: id, IsTest: isTestFile(rel)}
 			byName[f.Name] = append(byName[f.Name], key)
 			callers = append(callers, caller{key: key, calls: f.Calls})
 		}
