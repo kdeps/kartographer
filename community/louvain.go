@@ -28,6 +28,12 @@ type Edge struct {
 // modularity. Communities are numbered 0 upward, largest first; ties go to
 // the community holding the smallest node index. It is deterministic.
 func Detect(n int, edges []Edge) (assign []int, modularity float64) {
+	return detect(n, edges, nil)
+}
+
+// detect is Detect with an optional refinement applied to each pass's
+// partition before it is aggregated. A nil refinement is Louvain.
+func detect(n int, edges []Edge, refine func([]map[int]float64, []int) []int) (assign []int, modularity float64) {
 	assign = make([]int, n)
 	for i := range assign {
 		assign[i] = i
@@ -56,6 +62,9 @@ func Detect(n int, edges []Edge) (assign []int, modularity float64) {
 		comm, moved := localMoves(adj)
 		if !moved {
 			break
+		}
+		if refine != nil {
+			comm = refine(adj, comm)
 		}
 		comm, count := renumber(comm)
 		for i := range member {
