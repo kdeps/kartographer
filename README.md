@@ -284,5 +284,12 @@ kartographer -rules rules.yaml explain "helper"              # a symbol with its
 kartographer -rules rules.yaml affected "leaf" --depth 2     # symbols that depend on it, nearest first
 ```
 
-`query` takes `--k`, `--budget` and `--skeleton`. Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
+kartographer -rules rules.yaml watch [dir] [-interval 2s]     # rebuild when files change
+kartographer -rules rules.yaml hook install                  # rebuild after commits and checkouts
+kartographer -rules rules.yaml hook uninstall|status
+kartographer -rules rules.yaml export graphml [-o FILE]      # the call graph as GraphML
+```
+
+`query` takes `--k`, `--budget` and `--skeleton`. The git hooks rebuild only when `KARTOGRAPHER_RULES` is set to the
+rules file path; they never guess one. Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
 
