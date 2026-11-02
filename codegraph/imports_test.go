@@ -15,7 +15,7 @@ func TestModuleImportsKeepsOnlyInModuleImports(t *testing.T) {
 		"go.mod":      "module example.com/m\n\ngo 1.21\n",
 		"a/a.go":      "package a\n\nimport (\n\t\"fmt\"\n\t\"example.com/m/b\"\n)\n\nvar _ = fmt.Sprint\nvar _ = b.X\n",
 		"b/b.go":      "package b\n\nvar X = 1\n",
-		"b/broken.go": "package b\n\nfunc (\n",
+		"b/broken.go": "package b\n\nimport (\n\t\"example.com/m/a\"\n",
 		"root.go":     "package m\n",
 	}
 	for name, body := range files {

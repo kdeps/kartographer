@@ -19,8 +19,8 @@ type FileImports struct {
 
 // ModuleImports reads the imports of the given Go files of the module at root.
 // Only imports of the module's own packages are kept: a dependency outside the
-// module is not part of the module's graph. A file that cannot be parsed is
-// left out.
+// module is not part of the module's graph. A file whose import block cannot be
+// parsed is left out.
 func ModuleImports(root string, files []string) ([]FileImports, error) {
 	module, err := modulePath(root)
 	if err != nil {
