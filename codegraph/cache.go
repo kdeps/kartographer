@@ -33,7 +33,7 @@ func BuildCached(dir, cacheDir string) (*Index, error) {
 	if err != nil {
 		return nil, err
 	}
-	fp, err := fingerprint(root)
+	fp, err := Fingerprint(root)
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +54,9 @@ func cacheName(root string) string {
 	return hex.EncodeToString(sum[:8]) + ".json"
 }
 
-// fingerprint hashes the path, size and modification time of every file under
+// Fingerprint hashes the path, size and modification time of every file under
 // root, so any edit, addition or removal changes it.
-func fingerprint(root string) (string, error) {
+func Fingerprint(root string) (string, error) {
 	h := sha256.New()
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {

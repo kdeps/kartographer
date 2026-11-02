@@ -16,6 +16,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/kdeps/kartographer/codegraph"
 )
@@ -28,6 +29,9 @@ commands:
   path "<source>" "<target>"         the connection between two symbols
   explain "<symbol>"                 a symbol with its source and neighbours
   affected "<symbol>"                symbols that depend on it, by distance
+  watch [dir]                        rebuild the index when files change
+  hook install|uninstall|status      rebuild after commits and checkouts (set KARTOGRAPHER_RULES)
+  export graphml [-o FILE]           write the code graph as GraphML
 
 flags: -rules FILE (required), -dir DIR (default .), -no-cache`
 
@@ -73,7 +77,8 @@ func run(args []string, out, errw io.Writer) int {
 var errUsage = errors.New("bad usage")
 
 //nolint:gochecknoglobals // fixed command list
-var knownCommands = map[string]bool{"update": true, "query": true, "path": true, "explain": true, "affected": true}
+var knownCommands = map[string]bool{"update": true, "query": true, "path": true, "explain": true, "affected": true,
+	"watch": true, "hook": true, "export": true}
 
 // execute parses one command's flags and arguments, then runs it.
 func execute(cmd string, args []string, out io.Writer) error {
@@ -87,6 +92,8 @@ func execute(cmd string, args []string, out io.Writer) error {
 	directed := fs.Bool("directed", false, "path: follow calls one way only")
 	depth := fs.Int("depth", 2, "affected: how many caller hops to follow")
 	limit := fs.Int("limit", 60, "affected: symbols to return")
+	interval := fs.Duration("interval", 2*time.Second, "watch: how often to check for changes")
+	outPath := fs.String("o", "", "export: file to write (default stdout)")
 	positional, flagArgs := splitArgs(args)
 	if err := fs.Parse(flagArgs); err != nil {
 		return fmt.Errorf("%w: %v", errUsage, err)
@@ -112,6 +119,24 @@ func execute(cmd string, args []string, out io.Writer) error {
 
 	if !knownCommands[cmd] {
 		return fmt.Errorf("%w: unknown command %q", errUsage, cmd)
+	}
+	switch cmd {
+	case "watch":
+		target := *dir
+		if len(positional) > 0 {
+			target = positional[0]
+		}
+		return watchCommand(out, target, *interval, 0, *noCache)
+	case "hook":
+		if len(positional) == 0 {
+			return fmt.Errorf("%w: hook needs install, uninstall or status", errUsage)
+		}
+		return hookCommand(out, *dir, positional[0])
+	case "export":
+		if len(positional) == 0 {
+			return fmt.Errorf("%w: export needs a format (graphml)", errUsage)
+		}
+		return exportCommand(out, positional[0], *outPath, *dir, *noCache)
 	}
 	if len(positional) == 0 || (cmd == "path" && len(positional) < 2) {
 		return fmt.Errorf("%w: %s needs %s", errUsage, cmd, map[string]string{
