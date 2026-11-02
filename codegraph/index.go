@@ -75,14 +75,27 @@ func Build(dir string) (*Index, error) {
 	if idx.Module == "" {
 		idx.Module = filepath.Base(root)
 	}
-	notesPath, err := notes.DefaultPath(idx.Module)
-	if err != nil {
+	if err := idx.attachNotes(); err != nil {
 		return nil, err
 	}
-	idx.Notes = notes.Open(notesPath)
-	idx.deps = graph.NewDependencyGraph(afero.NewMemMapFs(), log.Default(), deps)
-	idx.callers = idx.deps.InvertDependencies()
+	idx.setDeps(deps)
 	return idx, nil
+}
+
+// attachNotes opens the module's note store.
+func (ix *Index) attachNotes() error {
+	path, err := notes.DefaultPath(ix.Module)
+	if err != nil {
+		return err
+	}
+	ix.Notes = notes.Open(path)
+	return nil
+}
+
+// setDeps installs the call edges and derives the reverse map.
+func (ix *Index) setDeps(deps map[string][]string) {
+	ix.deps = graph.NewDependencyGraph(afero.NewMemMapFs(), log.Default(), deps)
+	ix.callers = ix.deps.InvertDependencies()
 }
 
 func indexGo(root string, idx *Index, deps map[string][]string) error {
