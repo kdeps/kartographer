@@ -51,12 +51,16 @@ func TestAddDoc_LinksTagsAndMissing(t *testing.T) {
 		got[e.From+" -> "+e.To+" "+e.Relation] = e.SourceLocation
 	}
 	want := map[string]string{
-		"note:hub.md -> note:spoke.md": RelReferences + "@L3",
-		"note:hub.md -> tag:billing":   RelTagged + "@L2",
+		"note:hub.md -> note:spoke.md " + RelReferences: "L3",
+		"note:hub.md -> note:spoke.md " + RelRelatesTo:  "L1",
+		"note:hub.md -> tag:billing " + RelTagged:       "L2",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("edges = %v", got)
 	}
 	for k, v := range want {
 		if got[k] != v {
-			t.Errorf("edge %s = %q, want %q (all: %v)", k, got[k], v, got)
+			t.Errorf("edge %s at %q, want %q", k, got[k], v)
 		}
 	}
 }
