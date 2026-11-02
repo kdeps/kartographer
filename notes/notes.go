@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/kdeps/kartographer/store"
 )
 
 // Note is one saved statement.
@@ -121,14 +123,7 @@ func (s *Store) load() ([]Note, error) {
 }
 
 func (s *Store) save(all []Note) error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
-		return err
-	}
-	raw, err := json.MarshalIndent(all, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(s.path, raw, 0o600)
+	return store.WriteJSON(s.path, all)
 }
 
 func words(q string) []string {
