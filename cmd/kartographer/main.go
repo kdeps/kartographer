@@ -31,7 +31,8 @@ commands:
   affected "<symbol>"                symbols that depend on it, by distance
   watch [dir]                        rebuild the index when files change
   hook install|uninstall|status      rebuild after commits and checkouts (set KARTOGRAPHER_RULES)
-  export graphml [-o FILE]           write the code graph as GraphML
+  export FORMAT [-o FILE|DIR]        write the graph: graphml, html, svg, obsidian, wiki, neo4j, falkordb
+  add "<url>" [--dir-raw raw]        fetch a page into the raw directory (--author, --contributor)
 
 flags: -rules FILE (required), -dir DIR (default .), -no-cache`
 
@@ -78,7 +79,7 @@ var errUsage = errors.New("bad usage")
 
 //nolint:gochecknoglobals // fixed command list
 var knownCommands = map[string]bool{"update": true, "query": true, "path": true, "explain": true, "affected": true,
-	"watch": true, "hook": true, "export": true}
+	"watch": true, "hook": true, "export": true, "add": true}
 
 // execute parses one command's flags and arguments, then runs it.
 func execute(cmd string, args []string, out io.Writer) error {
@@ -93,7 +94,10 @@ func execute(cmd string, args []string, out io.Writer) error {
 	depth := fs.Int("depth", 2, "affected: how many caller hops to follow")
 	limit := fs.Int("limit", 60, "affected: symbols to return")
 	interval := fs.Duration("interval", 2*time.Second, "watch: how often to check for changes")
-	outPath := fs.String("o", "", "export: file to write (default stdout)")
+	outPath := fs.String("o", "", "export: file or directory to write (default stdout)")
+	rawDir := fs.String("dir-raw", "raw", "add: directory for the fetched page")
+	author := fs.String("author", "", "add: author recorded in the front matter")
+	contributor := fs.String("contributor", "", "add: contributor recorded in the front matter")
 	positional, flagArgs := splitArgs(args)
 	if err := fs.Parse(flagArgs); err != nil {
 		return fmt.Errorf("%w: %v", errUsage, err)
@@ -132,9 +136,14 @@ func execute(cmd string, args []string, out io.Writer) error {
 			return fmt.Errorf("%w: hook needs install, uninstall or status", errUsage)
 		}
 		return hookCommand(out, *dir, positional[0])
+	case "add":
+		if len(positional) == 0 {
+			return fmt.Errorf("%w: add needs a URL", errUsage)
+		}
+		return addCommand(out, positional[0], *rawDir, *author, *contributor)
 	case "export":
 		if len(positional) == 0 {
-			return fmt.Errorf("%w: export needs a format (graphml)", errUsage)
+			return fmt.Errorf("%w: export needs a format (graphml, html, svg, obsidian, wiki, neo4j, falkordb)", errUsage)
 		}
 		return exportCommand(out, positional[0], *outPath, *dir, *noCache)
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,26 +143,105 @@ func watchCommand(out io.Writer, dir string, interval time.Duration, rounds int,
 	return nil
 }
 
-// exportCommand writes the index in a format: graphml, to stdout or to path.
+// exportCommand writes the index in a format. Single-file formats go to stdout
+// or to path; obsidian and wiki write a directory named by path.
 func exportCommand(out io.Writer, format, path, dir string, noCache bool) error {
-	if format != "graphml" {
-		return fmt.Errorf("%w: export supports graphml", errUsage)
-	}
 	ix, err := load(dir, noCache)
 	if err != nil {
 		return err
 	}
+	switch format {
+	case "obsidian", "wiki":
+		if path == "" {
+			return fmt.Errorf("%w: export %s needs -o DIR", errUsage, format)
+		}
+		if format == "obsidian" {
+			err = codegraph.WriteObsidian(path, ix)
+		} else {
+			err = codegraph.WriteWiki(path, ix)
+		}
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "wrote %s\n", path)
+		return nil
+	case "graphml", "html", "svg", "neo4j", "falkordb":
+	default:
+		return fmt.Errorf("%w: export supports graphml, html, svg, obsidian, wiki, neo4j, falkordb", errUsage)
+	}
+	write := map[string]func(io.Writer, *codegraph.Index) error{
+		"graphml":  codegraph.WriteGraphML,
+		"html":     codegraph.WriteHTML,
+		"svg":      codegraph.WriteSVG,
+		"neo4j":    codegraph.WriteCypher,
+		"falkordb": codegraph.WriteCypher,
+	}[format]
 	if path == "" {
-		return codegraph.WriteGraphML(out, ix)
+		return write(out, ix)
 	}
 	f, err := os.Create(path) //nolint:gosec // the output path is the user's choice
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	if err := codegraph.WriteGraphML(f, ix); err != nil {
+	if err := write(f, ix); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "wrote %s\n", path)
 	return nil
+}
+
+// addCommand fetches an http or https URL into dir as a markdown file with the
+// source and the optional author and contributor in its front matter.
+func addCommand(out io.Writer, url, dir, author, contributor string) error {
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		return fmt.Errorf("%w: add needs an http or https URL", errUsage)
+	}
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(url) //nolint:noctx // a one-off CLI fetch
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		return fmt.Errorf("fetch %s: %s", url, resp.Status)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAddBytes))
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	var doc bytes.Buffer
+	doc.WriteString("---\n")
+	fmt.Fprintf(&doc, "source: %q\n", url)
+	fmt.Fprintf(&doc, "fetched: %q\n", time.Now().UTC().Format(time.RFC3339))
+	if author != "" {
+		fmt.Fprintf(&doc, "author: %q\n", author)
+	}
+	if contributor != "" {
+		fmt.Fprintf(&doc, "contributor: %q\n", contributor)
+	}
+	doc.WriteString("---\n\n")
+	doc.Write(body)
+	name := filepath.Join(dir, addFileName(url))
+	if err := os.WriteFile(name, doc.Bytes(), 0o600); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "saved %s\n", name)
+	return nil
+}
+
+// maxAddBytes caps one fetched page.
+const maxAddBytes = 16 << 20
+
+// addFileName derives a file name from a URL: its host and path, slugged.
+func addFileName(url string) string {
+	s := strings.TrimPrefix(strings.TrimPrefix(url, "https://"), "http://")
+	s = strings.Trim(strings.NewReplacer("/", "_", "?", "_", "&", "_", "=", "_", ":", "_").Replace(s), "_")
+	if s == "" {
+		s = "page"
+	}
+	return s + ".md"
 }
