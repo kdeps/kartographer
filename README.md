@@ -236,8 +236,14 @@ still exist and updating the topic index accordingly.
 `cmd/kartographer-mcp` indexes a Go module and serves its code graph over MCP on stdio, using the tool names
 Graphify uses (`graphify_find`, `graphify_callers`, `graphify_callees`, `graphify_impact`, `graphify_tests_for`,
 `graph_stats`, `list_repositories`, `graphify_rank_files`, `query_graph`, `graphify_file_neighbors`, `graphify_node`, `graphify_trace`, `shortest_path`,
-`graphify_expand`, `graphify_find_seeds`, `search`, `graphify_render_subgraph`). `graphify_references` and
-`graphify_imports_exports` are not served: the index does not store non-call references or import statements.
+`graphify_expand`, `graphify_find_seeds`, `search`, `graphify_render_subgraph`, `remember`, `recall`,
+`memories_about`, `list_workspaces`, `set_workspace`, `impact_and_risk`, `fetch`).
+`graphify_references` and `graphify_imports_exports` are not served: the index does not store non-call references or
+import statements.
+
+Notes are local: one JSON file per module under the user config directory (`kartographer/notes`). The hosted memory
+service's options (profiles, sufficiency, grounding, time filters) are accepted and ignored. `fetch` takes a symbol
+name, not a repository:snapshot:node id.
 
 `query_graph` and `graphify_rank_files` are keyword matches on symbol names and file paths, weighted by how connected
 a symbol is. They are not semantic search, so use specific words from the code.

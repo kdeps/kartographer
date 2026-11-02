@@ -33,6 +33,7 @@ func TestToolNamesMatchGraphify(t *testing.T) {
 		"graph_stats", "list_repositories",
 		"graphify_node", "graphify_trace", "shortest_path", "graphify_expand",
 		"graphify_find_seeds", "search", "graphify_render_subgraph",
+		"remember", "recall", "memories_about", "list_workspaces", "set_workspace", "impact_and_risk", "fetch",
 	}, got)
 }
 
