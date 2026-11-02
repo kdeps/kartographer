@@ -28,6 +28,10 @@ const (
 // strict_calls and code_only are accepted for compatibility. The index holds
 // only resolved calls and only code nodes, so both have no effect yet.
 func Tools(ix *Index) []mcp.Tool {
+	return append(tierOneTools(ix), Tier2Tools(ix)...)
+}
+
+func tierOneTools(ix *Index) []mcp.Tool {
 	symbolArg := map[string]any{"type": "string", "description": "Symbol name, e.g. 'Type.Method' or 'pkg.Func'."}
 	limitArg := func(def int) map[string]any {
 		return map[string]any{"type": "integer", "minimum": 1, "maximum": maxResultLimit, "default": def}

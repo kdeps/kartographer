@@ -31,6 +31,8 @@ func TestToolNamesMatchGraphify(t *testing.T) {
 		"graphify_find", "graphify_callers", "graphify_callees", "graphify_impact",
 		"graphify_tests_for", "graphify_rank_files", "query_graph", "graphify_file_neighbors",
 		"graph_stats", "list_repositories",
+		"graphify_node", "graphify_trace", "shortest_path", "graphify_expand",
+		"graphify_find_seeds", "search", "graphify_render_subgraph",
 	}, got)
 }
 
