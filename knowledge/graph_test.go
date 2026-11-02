@@ -3,6 +3,7 @@ package knowledge
 import (
 	"testing"
 
+	"github.com/kdeps/kartographer/community"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,4 +91,16 @@ func TestCommunitiesSplitTwoCliquesWithWeights(t *testing.T) {
 
 func TestCommunitiesOfNothingIsZero(t *testing.T) {
 	assert.Equal(t, 0.0, Communities(&Graph{}, func(*Edge) float64 { return 1 }))
+}
+
+func TestCommunitiesWith_UsesTheGivenDetector(t *testing.T) {
+	g := &Graph{Nodes: []*Node{{ID: "a"}, {ID: "b"}}, Edges: []*Edge{{From: "a", To: "b"}}}
+	called := false
+	CommunitiesWith(g, func(*Edge) float64 { return 1 }, func(n int, edges []community.Edge) ([]int, float64) {
+		called = true
+		return make([]int, n), 0
+	})
+	if !called || g.Communities != 1 {
+		t.Errorf("detector not used: called=%v communities=%d", called, g.Communities)
+	}
 }
