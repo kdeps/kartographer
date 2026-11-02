@@ -12,16 +12,17 @@ import (
 )
 
 // cacheVersion changes when the saved format or the analysis changes.
-const cacheVersion = 1
+const cacheVersion = 2
 
 // snapshot is an index saved to disk.
 type snapshot struct {
-	Version     int                 `json:"version"`
-	Fingerprint string              `json:"fingerprint"`
-	Module      string              `json:"module"`
-	Symbols     map[string]Symbol   `json:"symbols"`
-	Missing     []string            `json:"missing,omitempty"`
-	Deps        map[string][]string `json:"deps"`
+	Version     int                    `json:"version"`
+	Fingerprint string                 `json:"fingerprint"`
+	Module      string                 `json:"module"`
+	Symbols     map[string]Symbol      `json:"symbols"`
+	Missing     []string               `json:"missing,omitempty"`
+	Deps        map[string][]string    `json:"deps"`
+	Refs        map[string][]Reference `json:"refs,omitempty"`
 }
 
 // BuildCached returns the index of dir, reusing the copy saved in cacheDir
@@ -90,7 +91,7 @@ func loadSnapshot(file, fp, root string) (*Index, bool) {
 	if json.Unmarshal(raw, &s) != nil || s.Version != cacheVersion || s.Fingerprint != fp {
 		return nil, false
 	}
-	ix := &Index{Root: root, Module: s.Module, Symbols: s.Symbols, Missing: s.Missing}
+	ix := &Index{Root: root, Module: s.Module, Symbols: s.Symbols, Missing: s.Missing, refs: s.Refs}
 	ix.setDeps(s.Deps)
 	if err := ix.attachNotes(); err != nil {
 		return nil, false
@@ -109,7 +110,7 @@ func saveSnapshot(file, fp string, ix *Index) error {
 	}
 	raw, err := json.Marshal(snapshot{
 		Version: cacheVersion, Fingerprint: fp, Module: ix.Module,
-		Symbols: ix.Symbols, Missing: ix.Missing, Deps: deps,
+		Symbols: ix.Symbols, Missing: ix.Missing, Deps: deps, Refs: ix.refs,
 	})
 	if err != nil {
 		return err

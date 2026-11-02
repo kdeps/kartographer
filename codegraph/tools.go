@@ -14,7 +14,8 @@ import (
 // only resolved calls and only code nodes, so both have no effect yet.
 func Tools(ix *Index) []mcp.Tool {
 	tools := append(tierOneTools(ix), Tier2Tools(ix)...)
-	return append(tools, Tier3Tools(ix)...)
+	tools = append(tools, Tier3Tools(ix)...)
+	return append(tools, RefTools(ix)...)
 }
 
 func tierOneTools(ix *Index) []mcp.Tool {

@@ -39,6 +39,8 @@ type rulesFile struct {
 		MemoriesAbout  int `yaml:"memories_about"`
 		ImpactFiles    int `yaml:"impact_files"`
 		FetchBytes     int `yaml:"fetch_bytes"`
+		References     int `yaml:"references"`
+		ImportsExports int `yaml:"imports_exports"`
 	} `yaml:"limits"`
 	Paths struct {
 		MaxDepth int `yaml:"max_depth"`

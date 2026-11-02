@@ -28,6 +28,8 @@ limits:
   memories_about: 5
   impact_files: 15      # files returned by impact_and_risk
   fetch_bytes: 16384    # source bytes returned by fetch
+  references: 25        # non-call uses returned by references
+  imports_exports: 50   # import paths and exported names returned by imports_exports
 
 paths:
   max_depth: 8          # longest call path trace searches

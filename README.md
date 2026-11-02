@@ -242,7 +242,9 @@ still exist and updating the topic index accordingly.
 - Notes and workspaces: `remember`, `recall`, `memories_about`, `list_workspaces`, `set_workspace`
 - Module: `stats`, `list_modules`
 
-Not served: non-call references and import statements, because the index does not store them.
+- Go-only analysis: `references` (non-call uses of a function, from SSA) and `imports_exports` (a file's imports and exported names).
+
+Limits and weights come from `codegraph/rules.yaml`.
 
 Notes are local: one JSON file per module under the user config directory (`kartographer/notes`). The hosted memory
 service's options (profiles, sufficiency, grounding, time filters) are accepted and ignored. `fetch` takes a symbol
