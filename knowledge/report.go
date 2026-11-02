@@ -1,6 +1,9 @@
 package knowledge
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // ReportOptions sets how many entries each list of a report keeps.
 type ReportOptions struct {
@@ -161,6 +164,27 @@ func bridges(g *Graph, byID map[string]*Node, size map[int]int, top int) []Bridg
 	})
 	if len(out) > top {
 		out = out[:top]
+	}
+	return out
+}
+
+// MatchEdges lists the edges whose endpoints, labels or source file contain
+// query, case-insensitively, in graph order. Nil for an empty query.
+func MatchEdges(g *Graph, query string) []*Edge {
+	q := strings.ToLower(strings.TrimSpace(query))
+	if g == nil || q == "" {
+		return nil
+	}
+	labels := map[string]string{}
+	for _, n := range g.Nodes {
+		labels[n.ID] = strings.ToLower(n.Label + " " + n.Note + " " + n.ID)
+	}
+	var out []*Edge
+	for _, e := range g.Edges {
+		blob := strings.ToLower(e.From + " " + e.To + " " + e.SourceFile + " " + labels[e.From] + " " + labels[e.To])
+		if strings.Contains(blob, q) {
+			out = append(out, e)
+		}
 	}
 	return out
 }

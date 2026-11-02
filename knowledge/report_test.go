@@ -46,3 +46,22 @@ func TestNewReport_RanksGroupsBridgesAndTruncates(t *testing.T) {
 		t.Errorf("the lone link between communities 0 and 1 is the surprise: %+v", r.Surprising)
 	}
 }
+
+func TestMatchEdges(t *testing.T) {
+	g := &Graph{
+		Nodes: []*Node{{ID: "note:a.md", Label: "Billing", Note: "a.md"}, {ID: "note:b.md", Label: "Other", Note: "b.md"}},
+		Edges: []*Edge{
+			{From: "note:a.md", To: "note:b.md", SourceFile: "a.md"},
+			{From: "note:b.md", To: "note:b.md", SourceFile: "b.md"},
+		},
+	}
+	if got := MatchEdges(g, "BILLING"); len(got) != 1 || got[0].From != "note:a.md" {
+		t.Errorf("label match wrong: %+v", got)
+	}
+	if got := MatchEdges(g, "  "); got != nil {
+		t.Errorf("empty query must match nothing")
+	}
+	if got := MatchEdges(nil, "x"); got != nil {
+		t.Errorf("nil graph must match nothing")
+	}
+}
