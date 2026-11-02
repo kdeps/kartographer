@@ -24,6 +24,7 @@ import (
 
 	"github.com/kdeps/kartographer/graph"
 	"github.com/kdeps/kartographer/lsp"
+	"github.com/kdeps/kartographer/notes"
 )
 
 // Symbol is one function or method in the module.
@@ -45,6 +46,8 @@ type Index struct {
 	Missing []string
 	deps    *graph.DependencyGraph
 	callers map[string][]string
+	// Notes is the module's local note store, used by the memory tools.
+	Notes *notes.Store
 }
 
 // Build indexes every function in dir. Go modules are analysed with SSA and
@@ -72,6 +75,11 @@ func Build(dir string) (*Index, error) {
 	if idx.Module == "" {
 		idx.Module = filepath.Base(root)
 	}
+	notesPath, err := notes.DefaultPath(idx.Module)
+	if err != nil {
+		return nil, err
+	}
+	idx.Notes = notes.Open(notesPath)
 	idx.deps = graph.NewDependencyGraph(afero.NewMemMapFs(), log.Default(), deps)
 	idx.callers = idx.deps.InvertDependencies()
 	return idx, nil

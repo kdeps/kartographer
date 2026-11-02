@@ -28,7 +28,8 @@ const (
 // strict_calls and code_only are accepted for compatibility. The index holds
 // only resolved calls and only code nodes, so both have no effect yet.
 func Tools(ix *Index) []mcp.Tool {
-	return append(tierOneTools(ix), Tier2Tools(ix)...)
+	tools := append(tierOneTools(ix), Tier2Tools(ix)...)
+	return append(tools, Tier3Tools(ix)...)
 }
 
 func tierOneTools(ix *Index) []mcp.Tool {
