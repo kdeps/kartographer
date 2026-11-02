@@ -46,6 +46,8 @@ kartographer -rules rules.yaml add "https://example.com/a"   # fetch a page into
 ```
 
 Global flags: `-rules FILE` (required), `-dir DIR` (module root, default `.`), `-no-cache`.
+`callers` and `callees` rows, and the GraphML and Cypher exports, carry a `confidence` of `EXTRACTED` (a direct call site or language server reference) or `INFERRED` (an interface method call that VTA resolved by type propagation, so the target is an approximation).
+
 `query` takes `--k`, `--budget` and `--skeleton`. `add` takes `--dir-raw` (default `raw`), `--author` and `--contributor`; it uses `--dir-raw` rather than `--dir` because `-dir` selects the module root.
 
 Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
