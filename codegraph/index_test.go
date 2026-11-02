@@ -14,14 +14,6 @@ func fixture(t *testing.T) *Index {
 	return ix
 }
 
-func names(s []Symbol) []string {
-	out := make([]string, 0, len(s))
-	for _, x := range s {
-		out = append(out, x.Name)
-	}
-	return out
-}
-
 func TestBuildIndexesModuleSymbols(t *testing.T) {
 	ix := fixture(t)
 	assert.Equal(t, "example.com/fx", ix.Module)

@@ -412,3 +412,12 @@ func relPath(root, file string) string {
 	r := strings.TrimSuffix(root, "/") + "/"
 	return strings.TrimPrefix(file, r)
 }
+
+// names are the symbol names, in order.
+func names(s []Symbol) []string {
+	out := make([]string, 0, len(s))
+	for _, x := range s {
+		out = append(out, x.Name)
+	}
+	return out
+}
