@@ -58,8 +58,11 @@ The git hooks rebuild only when `KARTOGRAPHER_RULES` is set to the rules file pa
 ## MCP server
 
 ```bash
-kartographer-mcp -rules rules.yaml -dir /path/to/module
+kartographer-mcp -rules rules.yaml -dir /path/to/modulekartographer-mcp -rules rules.yaml -dir /path/to/module -listen :8080   # HTTP instead of stdio
 ```
+
+Over HTTP, each client POSTs one JSON-RPC request to `/` and reads the JSON response; a notification gets `202`. Requests are handled one at a time, since the note store is not locked. The server is one process you run and point clients at. It has no accounts or TLS: put it behind a reverse proxy that adds them.
+
 
 Serves the code graph over stdio MCP. The tools are:
 

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync"
 )
 
 // ProtocolVersion is the MCP revision this server speaks.
@@ -27,6 +28,9 @@ type Server struct {
 	Name    string
 	Version string
 	Tools   []Tool
+	// mu serialises requests in HTTP mode, where clients share the server: a
+	// tool may write its notes, and nothing else is locked.
+	mu sync.Mutex
 }
 
 type request struct {
