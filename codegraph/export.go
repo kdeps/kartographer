@@ -39,6 +39,7 @@ func WriteGraphML(w io.Writer, ix *Index) error {
 <key id="file" for="node" attr.name="file" attr.type="string"/>
 <key id="line" for="node" attr.name="line" attr.type="int"/>
 <key id="language" for="node" attr.name="language" attr.type="string"/>
+<key id="confidence" for="edge" attr.name="confidence" attr.type="string"/>
 <graph id="G" edgedefault="directed">
 `); err != nil {
 		return err
@@ -58,7 +59,7 @@ func WriteGraphML(w io.Writer, ix *Index) error {
 		}
 	}
 	for i, e := range ix.Edges() {
-		if _, err := io.WriteString(w, `<edge id="e`+itoa(i)+`" source="`+escape(e[0])+`" target="`+escape(e[1])+`"/>`+"\n"); err != nil {
+		if _, err := io.WriteString(w, `<edge id="e`+itoa(i)+`" source="`+escape(e[0])+`" target="`+escape(e[1])+`"><data key="confidence">`+ix.Confidence(e[0], e[1])+`</data></edge>`+"\n"); err != nil {
 			return err
 		}
 	}

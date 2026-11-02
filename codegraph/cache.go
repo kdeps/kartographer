@@ -12,7 +12,19 @@ import (
 )
 
 // cacheVersion changes when the saved format or the analysis changes.
-const cacheVersion = 2
+const cacheVersion = 3
+
+// restoreInferred rebuilds the inferred-edge set saved by saveSnapshot.
+func restoreInferred(in map[string][]string) map[string]map[string]bool {
+	out := map[string]map[string]bool{}
+	for from, tos := range in {
+		out[from] = map[string]bool{}
+		for _, to := range tos {
+			out[from][to] = true
+		}
+	}
+	return out
+}
 
 // snapshot is an index saved to disk.
 type snapshot struct {
@@ -23,6 +35,7 @@ type snapshot struct {
 	Missing     []string               `json:"missing,omitempty"`
 	Deps        map[string][]string    `json:"deps"`
 	Refs        map[string][]Reference `json:"refs,omitempty"`
+	Inferred    map[string][]string    `json:"inferred,omitempty"`
 }
 
 // BuildCached returns the index of dir, reusing the copy saved in cacheDir
@@ -91,7 +104,8 @@ func loadSnapshot(file, fp, root string) (*Index, bool) {
 	if json.Unmarshal(raw, &s) != nil || s.Version != cacheVersion || s.Fingerprint != fp {
 		return nil, false
 	}
-	ix := &Index{Root: root, Module: s.Module, Symbols: s.Symbols, Missing: s.Missing, refs: s.Refs}
+	ix := &Index{Root: root, Module: s.Module, Symbols: s.Symbols, Missing: s.Missing, refs: s.Refs,
+		inferred: restoreInferred(s.Inferred)}
 	ix.setDeps(s.Deps)
 	if err := ix.attachNotes(); err != nil {
 		return nil, false
@@ -108,9 +122,16 @@ func saveSnapshot(file, fp string, ix *Index) error {
 	for name := range ix.Symbols {
 		deps[name] = ix.deps.NodeDependencies[name]
 	}
+	inferred := map[string][]string{}
+	for from, tos := range ix.inferred {
+		for to := range tos {
+			inferred[from] = append(inferred[from], to)
+		}
+	}
 	raw, err := json.Marshal(snapshot{
 		Version: cacheVersion, Fingerprint: fp, Module: ix.Module,
 		Symbols: ix.Symbols, Missing: ix.Missing, Deps: deps, Refs: ix.refs,
+		Inferred: inferred,
 	})
 	if err != nil {
 		return err

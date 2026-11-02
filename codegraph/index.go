@@ -47,6 +47,10 @@ type Index struct {
 	deps    *graph.DependencyGraph
 	callers map[string][]string
 	refs    map[string][]Reference
+	// inferred holds the call edges VTA resolved through an interface method,
+	// keyed by caller then callee. Every other edge is extracted from a direct
+	// call site or a language server reference.
+	inferred map[string]map[string]bool
 	// Notes is the module's local note store, used by the memory tools.
 	Notes *notes.Store
 }
@@ -140,7 +144,14 @@ func indexGo(root string, idx *Index, deps map[string][]string) error {
 			Language: "go",
 			IsTest:   strings.HasSuffix(rel, "_test.go"),
 		}
-		deps[name] = calleesOf(cg, fn, module)
+		callees, inferred := calleesOf(cg, fn, module)
+		deps[name] = callees
+		if len(inferred) > 0 {
+			if idx.inferred == nil {
+				idx.inferred = map[string]map[string]bool{}
+			}
+			idx.inferred[name] = inferred
+		}
 	}
 	return nil
 }
@@ -273,6 +284,17 @@ func (ix *Index) Callees(symbol string, limit int) ([]Symbol, error) {
 	return ix.symbols(ix.deps.NodeDependencies[name], limit), nil
 }
 
+// Confidence reports how the call edge from caller to callee was found.
+// "INFERRED" means VTA resolved an interface method call through type
+// propagation, so the target is an approximation. "EXTRACTED" means a direct
+// call site or a language server reference.
+func (ix *Index) Confidence(caller, callee string) string {
+	if ix.inferred[caller][callee] {
+		return "INFERRED"
+	}
+	return "EXTRACTED"
+}
+
 // Neighbours are the direct callers and callees of the target symbol.
 func (ix *Index) Neighbours(target string, limit int) ([]Symbol, error) {
 	name, err := ix.resolve(target)
@@ -378,11 +400,14 @@ func capped(s []Symbol, limit int) []Symbol {
 }
 
 // calleesOf are fn's resolved calls to functions in the module, by full name.
-func calleesOf(cg *callgraph.Graph, fn *ssa.Function, module string) []string {
+// inferred names the callees that were reached only through interface method
+// calls, which VTA resolves by type propagation rather than a direct call.
+func calleesOf(cg *callgraph.Graph, fn *ssa.Function, module string) ([]string, map[string]bool) {
 	node := cg.Nodes[fn]
 	if node == nil {
-		return nil
+		return nil, nil
 	}
+	direct := map[string]bool{}
 	seen := map[string]bool{}
 	var out []string
 	for _, e := range node.Out {
@@ -390,13 +415,22 @@ func calleesOf(cg *callgraph.Graph, fn *ssa.Function, module string) []string {
 			continue
 		}
 		name := displayName(e.Callee.Func)
+		if !e.Site.Common().IsInvoke() {
+			direct[name] = true
+		}
 		if !seen[name] {
 			seen[name] = true
 			out = append(out, name)
 		}
 	}
 	sort.Strings(out)
-	return out
+	inferred := map[string]bool{}
+	for _, name := range out {
+		if !direct[name] {
+			inferred[name] = true
+		}
+	}
+	return out, inferred
 }
 
 // displayName is fn's full name with the receiver written as a type path:

@@ -42,7 +42,7 @@ func TestExportSingleFileFormats(t *testing.T) {
 	var cy bytes.Buffer
 	require.NoError(t, exportCommand(&cy, "neo4j", "", fixture, true))
 	assert.Contains(t, cy.String(), `CREATE (n0:Symbol {name: `)
-	assert.Contains(t, cy.String(), "-[:CALLS]->")
+	assert.Contains(t, cy.String(), "-[:CALLS {confidence: ")
 
 	var fdb bytes.Buffer
 	require.NoError(t, exportCommand(&fdb, "falkordb", "", fixture, true))

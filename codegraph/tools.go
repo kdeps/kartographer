@@ -67,7 +67,8 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if err != nil {
 					return "", err
 				}
-				return render(found, nil)
+				target, _ := ix.resolve(a.Symbol)
+				return renderEdges(found, func(s Symbol) string { return ix.Confidence(s.Name, target) })
 			},
 		},
 		{
@@ -90,7 +91,8 @@ func tierOneTools(ix *Index) []mcp.Tool {
 				if err != nil {
 					return "", err
 				}
-				return render(found, nil)
+				source, _ := ix.resolve(a.Symbol)
+				return renderEdges(found, func(s Symbol) string { return ix.Confidence(source, s.Name) })
 			},
 		},
 		{
@@ -266,6 +268,23 @@ func pick(n, def int) int {
 		return def
 	}
 	return n
+}
+
+// renderEdges is render with the confidence of the edge to each symbol.
+func renderEdges(found []Symbol, confidence func(Symbol) string) (string, error) {
+	type row struct {
+		Name       string `json:"name"`
+		File       string `json:"file"`
+		Line       int    `json:"line"`
+		IsTest     bool   `json:"is_test,omitempty"`
+		Confidence string `json:"confidence"`
+	}
+	rows := make([]row, 0, len(found))
+	for _, s := range found {
+		rows = append(rows, row{s.Name, s.File, s.Line, s.IsTest, confidence(s)})
+	}
+	b, err := json.Marshal(rows)
+	return string(b), err
 }
 
 // render returns symbols as a JSON list of name, file and line.

@@ -25,8 +25,8 @@ func WriteCypher(w io.Writer, ix *Index) error {
 		}
 	}
 	for _, e := range ix.Edges() {
-		if _, err := fmt.Fprintf(w, "MATCH (a:Symbol {name: %q}), (b:Symbol {name: %q}) CREATE (a)-[:CALLS]->(b);\n",
-			e[0], e[1]); err != nil {
+		if _, err := fmt.Fprintf(w, "MATCH (a:Symbol {name: %q}), (b:Symbol {name: %q}) CREATE (a)-[:CALLS {confidence: %q}]->(b);\n",
+			e[0], e[1], ix.Confidence(e[0], e[1])); err != nil {
 			return err
 		}
 	}
