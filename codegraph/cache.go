@@ -12,7 +12,7 @@ import (
 )
 
 // cacheVersion changes when the saved format or the analysis changes.
-const cacheVersion = 3
+const cacheVersion = 4
 
 // restoreInferred rebuilds the inferred-edge set saved by saveSnapshot.
 func restoreInferred(in map[string][]string) map[string]map[string]bool {

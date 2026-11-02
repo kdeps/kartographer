@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -14,7 +15,18 @@ type Func struct {
 	File string // path relative to the root
 	Name string // qualified name within the file
 	Line int    // 1-based line of the name
+	End  int    // 1-based line where the body ends
 	Col  int    // 0-based column of the name
+}
+
+// Ref is a use of a function that is not a call: a function value, a callback,
+// or a reference from another initialiser. From is the function whose body
+// makes the use.
+type Ref struct {
+	Target string
+	From   string
+	File   string
+	Line   int
 }
 
 // Result is what a server reported for a set of files.
@@ -26,6 +38,9 @@ type Result struct {
 	// NoCallHierarchy is set when the server does not answer call hierarchy
 	// requests. Funcs are still reported; Calls is empty.
 	NoCallHierarchy bool
+	// Refs are the uses of functions that are not call edges, from the
+	// server's references answers.
+	Refs []Ref
 }
 
 const (
@@ -143,7 +158,72 @@ func Analyze(root, langID string, server []string, files []string) (Result, erro
 			}
 		}
 	}
+	res.Refs = usesOf(c, root, res)
 	return res, nil
+}
+
+// usesOf asks the server where each function is referenced. A call site is
+// already an edge in res.Calls, so only the other uses are kept.
+func usesOf(c *Client, root string, res Result) []Ref {
+	relOf := map[string]string{}
+	for _, f := range res.Funcs {
+		relOf[fileURI(filepath.Join(root, f.File))] = f.File
+	}
+	var out []Ref
+	for _, f := range res.Funcs {
+		var locs []location
+		err := c.Call("textDocument/references", map[string]any{
+			"textDocument": map[string]any{"uri": fileURI(filepath.Join(root, f.File))},
+			"position":     position{Line: f.Line - 1, Character: f.Col},
+			"context":      map[string]any{"includeDeclaration": false},
+		}, &locs)
+		if err != nil {
+			continue
+		}
+		out = append(out, referenceSites(res.Funcs, res.Calls, f.Key, relOf, locs)...)
+	}
+	return out
+}
+
+// location is a file position in a references answer.
+type location struct {
+	URI   string `json:"uri"`
+	Range span   `json:"range"`
+}
+
+// referenceSites turns the locations where target is referenced into Refs.
+// Each location is attributed to the innermost function whose body contains
+// it. A location that is already a call edge from that function is dropped.
+func referenceSites(funcs []Func, calls map[string][]string, target string, relOf map[string]string, locs []location) []Ref {
+	var out []Ref
+	for _, l := range locs {
+		rel, ok := relOf[l.URI]
+		if !ok {
+			continue
+		}
+		line := l.Range.Start.Line + 1
+		from, ok := enclosing(funcs, rel, line)
+		if !ok || slices.Contains(calls[from.Key], target) {
+			continue
+		}
+		out = append(out, Ref{Target: target, From: from.Key, File: rel, Line: line})
+	}
+	return out
+}
+
+// enclosing returns the innermost function in file whose body contains line.
+func enclosing(funcs []Func, file string, line int) (Func, bool) {
+	var best Func
+	found := false
+	for _, f := range funcs {
+		if f.File != file || line < f.Line || line > f.End {
+			continue
+		}
+		if !found || f.Line > best.Line {
+			best, found = f, true
+		}
+	}
+	return best, found
 }
 
 // flatten walks document symbols, keeping functions and methods with their
@@ -162,6 +242,7 @@ func flatten(rel, prefix string, syms []docSymbol, lines []string) []Func {
 				File: rel,
 				Name: name,
 				Line: s.SelectionRange.Start.Line + 1,
+				End:  s.Range.End.Line + 1,
 				Col:  s.SelectionRange.Start.Character,
 			})
 		}
