@@ -22,6 +22,8 @@ func TestMain(m *testing.M) {
 
 func testRules() rulesFile {
 	var r rulesFile
+	r.Paths.SkipDirs = []string{"vendor", "node_modules", "testdata"}
+	r.Paths.SkipHidden = true
 	r.Ranking.NameWeight = 3
 	r.Ranking.PathWeight = 1
 	r.Ranking.DegreeWeight = 0.1
