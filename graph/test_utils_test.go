@@ -72,20 +72,20 @@ func (m *MockPipeCreator) CreatePipe() (*os.File, *os.File, error) {
 
 func TestCreatePipeWithCreator_Error(t *testing.T) {
 	mock := &MockPipeCreator{shouldError: true}
-	
+
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("Expected panic on pipe creation error")
 		}
 	}()
-	
+
 	createPipeWithCreator(mock)
 }
 
 func TestCreatePipeWithCreator_Success(t *testing.T) {
 	mock := &MockPipeCreator{shouldError: false}
 	r, w := createPipeWithCreator(mock)
-	
+
 	if r == nil || w == nil {
 		t.Error("Expected valid pipe files")
 	}

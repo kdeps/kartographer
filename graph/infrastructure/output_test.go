@@ -1,9 +1,9 @@
 package infrastructure
 
 import (
-	"testing"
 	"github.com/charmbracelet/log"
 	"os"
+	"testing"
 )
 
 func TestNewLoggerOutputWriter(t *testing.T) {
@@ -17,6 +17,6 @@ func TestNewLoggerOutputWriter(t *testing.T) {
 func TestWriteLine(t *testing.T) {
 	logger := log.New(os.Stdout)
 	writer := NewLoggerOutputWriter(logger).(*LoggerOutputWriter)
-	
+
 	writer.WriteLine("test content")
 }

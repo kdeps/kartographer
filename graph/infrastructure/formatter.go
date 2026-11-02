@@ -1,8 +1,8 @@
 package infrastructure
 
 import (
-	"strings"
 	"github.com/kdeps/kartographer/graph/domain"
+	"strings"
 )
 
 type ArrowPathFormatter struct{}
