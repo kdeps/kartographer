@@ -15,6 +15,10 @@ const (
 	impactLimit    = 60
 	impactSeeds    = 8
 	testsForLimit  = 25
+	rankLimit      = 15
+	neighborLimit  = 50
+	queryBudget    = 5000
+	queryK         = 5
 	maxResultLimit = 300
 )
 
@@ -141,6 +145,96 @@ func Tools(ix *Index) []mcp.Tool {
 					return "", err
 				}
 				return render(found, nil)
+			},
+		},
+		{
+			Name:        "graphify_rank_files",
+			Description: "Rank the files that match a question by the symbols in them. Keyword match, not semantic.",
+			InputSchema: schema(map[string]any{
+				"question": map[string]any{"type": "string", "description": "A question or a few keywords."},
+				"limit":    limitArg(rankLimit),
+			}, "question"),
+			Handle: func(raw json.RawMessage) (string, error) {
+				var a struct {
+					Question string `json:"question"`
+					Limit    int    `json:"limit"`
+				}
+				if err := json.Unmarshal(raw, &a); err != nil {
+					return "", err
+				}
+				if a.Question == "" {
+					return "", fmt.Errorf("question is required")
+				}
+				hits := ix.RankFiles(a.Question, pick(a.Limit, rankLimit))
+				rows := make([]map[string]any, 0, len(hits))
+				for _, h := range hits {
+					rows = append(rows, map[string]any{"file": h.Symbol.File, "score": h.Score})
+				}
+				b, err := json.Marshal(rows)
+				return string(b), err
+			},
+		},
+		{
+			Name:        "query_graph",
+			Description: "Find the symbols that match a question, with their source text cut to a budget. Keyword match, not semantic.",
+			InputSchema: schema(map[string]any{
+				"question": map[string]any{"type": "string", "description": "A question or a few keywords."},
+				"budget":   map[string]any{"type": "integer", "minimum": 500, "maximum": 50000, "default": queryBudget, "description": "Approximate characters of source to return."},
+				"k":        map[string]any{"type": "integer", "minimum": 1, "maximum": 100, "default": queryK},
+				"skeleton": map[string]any{"type": "boolean", "default": false, "description": "Return locations only, without source."},
+			}, "question"),
+			Handle: func(raw json.RawMessage) (string, error) {
+				var a struct {
+					Question string `json:"question"`
+					Budget   int    `json:"budget"`
+					K        int    `json:"k"`
+					Skeleton bool   `json:"skeleton"`
+				}
+				if err := json.Unmarshal(raw, &a); err != nil {
+					return "", err
+				}
+				if a.Question == "" {
+					return "", fmt.Errorf("question is required")
+				}
+				hits := ix.Query(a.Question, pick(a.K, queryK), max(a.Budget, 500), a.Skeleton)
+				rows := make([]map[string]any, 0, len(hits))
+				for _, h := range hits {
+					row := map[string]any{"name": h.Symbol.Name, "file": h.Symbol.File, "line": h.Symbol.Line, "score": h.Score}
+					if !a.Skeleton {
+						row["body"] = h.Body
+					}
+					rows = append(rows, row)
+				}
+				b, err := json.Marshal(rows)
+				return string(b), err
+			},
+		},
+		{
+			Name:        "graphify_file_neighbors",
+			Description: "A file's dependencies (files it calls into) and dependents (files that call into it), from the call graph.",
+			InputSchema: schema(map[string]any{
+				"file":         map[string]any{"type": "string", "description": "Module-relative file path."},
+				"limit":        limitArg(neighborLimit),
+				"symbols_only": map[string]any{"type": "boolean", "default": false, "description": "Return the file's symbols only."},
+			}, "file"),
+			Handle: func(raw json.RawMessage) (string, error) {
+				var a struct {
+					File        string `json:"file"`
+					Limit       int    `json:"limit"`
+					SymbolsOnly bool   `json:"symbols_only"`
+				}
+				if err := json.Unmarshal(raw, &a); err != nil {
+					return "", err
+				}
+				if a.File == "" {
+					return "", fmt.Errorf("file is required")
+				}
+				if a.SymbolsOnly {
+					return render(ix.FileSymbols(a.File), nil)
+				}
+				deps, users := ix.FileNeighbors(a.File, pick(a.Limit, neighborLimit))
+				b, err := json.Marshal(map[string]any{"dependencies": deps, "dependents": users})
+				return string(b), err
 			},
 		},
 		{

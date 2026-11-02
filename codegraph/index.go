@@ -37,6 +37,7 @@ type Symbol struct {
 
 // Index is the code graph of one module.
 type Index struct {
+	Root    string // absolute module root
 	Module  string
 	Symbols map[string]Symbol
 	// Missing lists languages found in the module whose language server is
@@ -57,7 +58,7 @@ func Build(dir string) (*Index, error) {
 	if _, err := os.Stat(root); err != nil {
 		return nil, err
 	}
-	idx := &Index{Symbols: map[string]Symbol{}}
+	idx := &Index{Root: root, Symbols: map[string]Symbol{}}
 	deps := map[string][]string{}
 
 	if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
