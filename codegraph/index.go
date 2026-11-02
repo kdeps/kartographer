@@ -25,6 +25,7 @@ import (
 	"github.com/kdeps/kartographer/graph"
 	"github.com/kdeps/kartographer/lsp"
 	"github.com/kdeps/kartographer/notes"
+	"github.com/kdeps/kartographer/treesitter"
 )
 
 // Symbol is one function or method in the module.
@@ -179,6 +180,12 @@ func indexServers(root string, idx *Index, deps map[string][]string) error {
 		lang := langByID(reg, id)
 		server := lang.Server()
 		if server == nil {
+			if treesitter.Supports(id) {
+				if err := indexTreeSitter(root, id, byLang[id], idx, deps); err != nil {
+					return fmt.Errorf("%s: %w", id, err)
+				}
+				continue
+			}
 			idx.Missing = append(idx.Missing, fmt.Sprintf("%s: none of %v is installed", id, serverNames(lang)))
 			continue
 		}
