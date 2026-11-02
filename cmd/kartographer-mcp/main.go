@@ -18,7 +18,22 @@ const version = "0.3.0"
 func main() {
 	dir := flag.String("dir", ".", "module root to index")
 	noCache := flag.Bool("no-cache", false, "rebuild the index instead of reusing the saved one")
+	rulesPath := flag.String("rules", "", "YAML file of business rules (ranking, limits, stopwords); kdeps ships one")
 	flag.Parse()
+
+	if *rulesPath == "" {
+		fmt.Fprintln(os.Stderr, "kartographer-mcp: -rules is required")
+		os.Exit(2)
+	}
+	raw, err := os.ReadFile(*rulesPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "kartographer-mcp:", err)
+		os.Exit(1)
+	}
+	if err := codegraph.Configure(raw); err != nil {
+		fmt.Fprintln(os.Stderr, "kartographer-mcp: rules:", err)
+		os.Exit(1)
+	}
 
 	ix, err := load(*dir, *noCache)
 	if err != nil {

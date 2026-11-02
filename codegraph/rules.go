@@ -1,15 +1,13 @@
 package codegraph
 
 import (
-	_ "embed"
+	"errors"
 
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed rules.yaml
-var rulesYAML []byte
-
-// rulesFile mirrors rules.yaml.
+// rulesFile is the shape of the business rules a caller supplies. The values
+// are the caller's policy: the library holds none of its own.
 type rulesFile struct {
 	Ranking struct {
 		NameWeight   float64  `yaml:"name_weight"`
@@ -48,17 +46,28 @@ type rulesFile struct {
 	} `yaml:"paths"`
 }
 
-// rules are the code graph's business rules, read once from rules.yaml.
-var rules, stopwords = loadRules() //nolint:gochecknoglobals // loaded from embedded YAML
+// ErrNotConfigured is returned by Build until Configure has been called.
+var ErrNotConfigured = errors.New("codegraph: rules not configured; call Configure first")
 
-func loadRules() (rulesFile, map[string]bool) {
+// rules and stopwords are the configured policy. They are set once, by Configure.
+var (
+	rules      rulesFile       //nolint:gochecknoglobals // set once by Configure
+	stopwords  map[string]bool //nolint:gochecknoglobals // set once by Configure
+	configured bool            //nolint:gochecknoglobals // set once by Configure
+)
+
+// Configure sets the business rules from YAML the caller supplies (ranking
+// weights, stopwords, result limits, path bounds). Build fails with
+// ErrNotConfigured until it succeeds.
+func Configure(data []byte) error {
 	var r rulesFile
-	if err := yaml.Unmarshal(rulesYAML, &r); err != nil {
-		panic("codegraph: rules.yaml: " + err.Error())
+	if err := yaml.Unmarshal(data, &r); err != nil {
+		return err
 	}
 	set := make(map[string]bool, len(r.Ranking.Stopwords))
 	for _, w := range r.Ranking.Stopwords {
 		set[w] = true
 	}
-	return r, set
+	rules, stopwords, configured = r, set, true
+	return nil
 }

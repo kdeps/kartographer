@@ -244,7 +244,7 @@ still exist and updating the topic index accordingly.
 
 - Go-only analysis: `references` (non-call uses of a function, from SSA) and `imports_exports` (a file's imports and exported names).
 
-Limits and weights come from `codegraph/rules.yaml`.
+Business rules (ranking weights, stopwords, result limits, path bounds) are supplied by the caller as YAML and are not stored in this repository. `kartographer-mcp -rules <file>` reads them; kdeps keeps the rules file.
 
 Notes are local: one JSON file per module under the user config directory (`kartographer/notes`). The hosted memory
 service's options (profiles, sufficiency, grounding, time filters) are accepted and ignored. `fetch` takes a symbol
@@ -254,7 +254,7 @@ name, not a repository:snapshot:node id.
 a symbol is. They are not semantic search, so use specific words from the code.
 
 ```bash
-go run ./cmd/kartographer-mcp -dir /path/to/module
+go run ./cmd/kartographer-mcp -rules /path/to/rules.yaml -dir /path/to/module
 ```
 
 Register it in an MCP client as a stdio server with the command above. The index is saved under the user cache
