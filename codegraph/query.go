@@ -9,7 +9,7 @@ import (
 )
 
 // Keyword ranking: a symbol scores for each query word its name or file path
-// contains, weighted by rules.yaml, plus a bonus for how connected it is. It is
+// contains, weighted by the configured rules, plus a bonus for how connected it is. It is
 // a lexical match, not a semantic one.
 
 // Hit is a symbol that matched a question, with its source when requested.

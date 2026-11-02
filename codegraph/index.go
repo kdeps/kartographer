@@ -55,6 +55,9 @@ type Index struct {
 // VTA. Other languages found under dir are analysed by the language server
 // that registry.yaml names for them, when one is installed.
 func Build(dir string) (*Index, error) {
+	if !configured {
+		return nil, ErrNotConfigured
+	}
 	root, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
