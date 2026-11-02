@@ -28,10 +28,10 @@ type Reference struct {
 
 // referencesIn records, for each module function fn, the module functions it
 // uses as values. A call whose callee is that function is not a reference.
-func referencesIn(fns map[*ssa.Function]bool, root, module string, fset *token.FileSet) map[string][]Reference {
+func referencesIn(fns map[*ssa.Function]bool, root string, mods modules, fset *token.FileSet) map[string][]Reference {
 	out := map[string][]Reference{}
 	for fn := range fns {
-		if !inModule(fn, module) {
+		if !inModule(fn, mods) {
 			continue
 		}
 		from := displayName(fn)
@@ -40,7 +40,7 @@ func referencesIn(fns map[*ssa.Function]bool, root, module string, fset *token.F
 				callee := calleeOf(ins)
 				for _, op := range ins.Operands(nil) {
 					target, ok := (*op).(*ssa.Function)
-					if !ok || (callee != nil && target == callee) || !inModule(target, module) || !target.Pos().IsValid() {
+					if !ok || (callee != nil && target == callee) || !inModule(target, mods) || !target.Pos().IsValid() {
 						continue
 					}
 					p := fset.Position(ins.Pos())

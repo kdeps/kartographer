@@ -110,28 +110,28 @@ func (ix *Index) setDeps(deps map[string][]string) {
 }
 
 func indexGo(root string, idx *Index, deps map[string][]string) error {
+	patterns, mods, err := goPackages(root)
+	if err != nil {
+		return err
+	}
 	cfg := &packages.Config{Mode: packages.LoadAllSyntax, Dir: root, Tests: true}
-	pkgs, err := packages.Load(cfg, "./...")
+	pkgs, err := packages.Load(cfg, patterns...)
 	if err != nil {
 		return err
 	}
 	if packages.PrintErrors(pkgs) > 0 {
 		return errors.New("the packages do not build")
 	}
-	module, err := modulePath(root)
-	if err != nil {
-		return err
-	}
-	idx.Module = module
+	idx.Module = strings.Join(mods, ", ")
 	prog, _ := ssautil.AllPackages(pkgs, ssa.InstantiateGenerics)
 	prog.Build()
 	fns := ssautil.AllFunctions(prog)
 	cg := vta.CallGraph(fns, cha.CallGraph(prog))
 	cg.DeleteSyntheticNodes()
-	idx.refs = referencesIn(fns, root, module, prog.Fset)
+	idx.refs = referencesIn(fns, root, mods, prog.Fset)
 
 	for fn := range fns {
-		if !inModule(fn, module) || !fn.Pos().IsValid() {
+		if !inModule(fn, mods) || !fn.Pos().IsValid() {
 			continue
 		}
 		name := displayName(fn)
@@ -152,7 +152,7 @@ func indexGo(root string, idx *Index, deps map[string][]string) error {
 			Language: "go",
 			IsTest:   strings.HasSuffix(rel, "_test.go"),
 		}
-		callees, inferred := calleesOf(cg, fn, module)
+		callees, inferred := calleesOf(cg, fn, mods)
 		deps[name] = callees
 		if len(inferred) > 0 {
 			if idx.inferred == nil {
@@ -427,7 +427,7 @@ func capped(s []Symbol, limit int) []Symbol {
 // calleesOf are fn's resolved calls to functions in the module, by full name.
 // inferred names the callees that were reached only through interface method
 // calls, which VTA resolves by type propagation rather than a direct call.
-func calleesOf(cg *callgraph.Graph, fn *ssa.Function, module string) ([]string, map[string]bool) {
+func calleesOf(cg *callgraph.Graph, fn *ssa.Function, mods modules) ([]string, map[string]bool) {
 	node := cg.Nodes[fn]
 	if node == nil {
 		return nil, nil
@@ -436,7 +436,7 @@ func calleesOf(cg *callgraph.Graph, fn *ssa.Function, module string) ([]string, 
 	seen := map[string]bool{}
 	var out []string
 	for _, e := range node.Out {
-		if e.Site == nil || e.Callee.Func == nil || !inModule(e.Callee.Func, module) {
+		if e.Site == nil || e.Callee.Func == nil || !inModule(e.Callee.Func, mods) {
 			continue
 		}
 		name := displayName(e.Callee.Func)
@@ -464,12 +464,11 @@ func displayName(fn *ssa.Function) string {
 	return strings.NewReplacer("(*", "", "(", "", ")", "").Replace(fn.String())
 }
 
-func inModule(fn *ssa.Function, module string) bool {
+func inModule(fn *ssa.Function, mods modules) bool {
 	if fn.Pkg == nil || fn.Pkg.Pkg == nil {
 		return false
 	}
-	p := fn.Pkg.Pkg.Path()
-	return p == module || strings.HasPrefix(p, module+"/")
+	return mods.contains(fn.Pkg.Pkg.Path())
 }
 
 // modulePath reads the module directive of root/go.mod.
