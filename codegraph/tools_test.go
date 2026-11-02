@@ -34,6 +34,7 @@ func TestToolNames(t *testing.T) {
 		"node", "trace", "shortest_path", "expand",
 		"find_seeds", "search", "render_subgraph",
 		"remember", "recall", "memories_about", "list_workspaces", "set_workspace", "impact_and_risk", "fetch",
+		"references", "imports_exports",
 	}, got)
 }
 

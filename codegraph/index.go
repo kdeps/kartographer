@@ -46,6 +46,7 @@ type Index struct {
 	Missing []string
 	deps    *graph.DependencyGraph
 	callers map[string][]string
+	refs    map[string][]Reference
 	// Notes is the module's local note store, used by the memory tools.
 	Notes *notes.Store
 }
@@ -117,6 +118,7 @@ func indexGo(root string, idx *Index, deps map[string][]string) error {
 	fns := ssautil.AllFunctions(prog)
 	cg := vta.CallGraph(fns, cha.CallGraph(prog))
 	cg.DeleteSyntheticNodes()
+	idx.refs = referencesIn(fns, root, module, prog.Fset)
 
 	for fn := range fns {
 		if !inModule(fn, module) || !fn.Pos().IsValid() {
