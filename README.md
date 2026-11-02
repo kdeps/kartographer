@@ -81,7 +81,7 @@ Serves the code graph over stdio MCP. The tools are:
 
 | Language | How |
 |---|---|
-| Go | `go/types`, SSA and call-graph analysis. Supports references and imports. |
+| Go | `go/types`, SSA and call-graph analysis. Supports references and imports. With a `go.work` file at the root, every module it `use`s is indexed together, so a call from one module into another is an edge. Files must sit under the root. |
 | Other, with a language server | The language server listed in `lsp/registry.yaml` for the file's extension, if it is on PATH. Its call hierarchy supplies the call edges, and its references answers supply the non-call uses. Both are read at index time, one request per function, so indexing a large module with a server takes longer. |
 
 | Other, with no language server | A tree-sitter grammar, for Python, JavaScript, TypeScript (and TSX), Java and Rust. A call is matched to every function of the same name in the module, so each such edge is tagged `INFERRED`. |
