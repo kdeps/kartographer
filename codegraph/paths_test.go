@@ -65,12 +65,12 @@ func TestTier2HandlersAndNames(t *testing.T) {
 	for _, tool := range Tools(ix) {
 		got = append(got, tool.Name)
 	}
-	for _, want := range []string{"graphify_node", "graphify_trace", "shortest_path", "graphify_expand",
-		"graphify_find_seeds", "search", "graphify_render_subgraph"} {
+	for _, want := range []string{"node", "trace", "shortest_path", "expand",
+		"find_seeds", "search", "render_subgraph"} {
 		assert.Contains(t, got, want)
 	}
 
-	out, err := toolByName(t, ix, "graphify_trace").Handle(json.RawMessage(`{"src":"Entry","tgt":"leaf"}`))
+	out, err := toolByName(t, ix, "trace").Handle(json.RawMessage(`{"src":"Entry","tgt":"leaf"}`))
 	require.NoError(t, err)
 	assert.Contains(t, out, `"paths"`)
 
@@ -78,11 +78,11 @@ func TestTier2HandlersAndNames(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out, `"connected":true`)
 
-	out, err = toolByName(t, ix, "graphify_node").Handle(json.RawMessage(`{"symbol":"leaf"}`))
+	out, err = toolByName(t, ix, "node").Handle(json.RawMessage(`{"symbol":"leaf"}`))
 	require.NoError(t, err)
 	assert.Contains(t, out, "func leaf")
 
-	out, err = toolByName(t, ix, "graphify_render_subgraph").Handle(json.RawMessage(`{"seeds":["leaf"]}`))
+	out, err = toolByName(t, ix, "render_subgraph").Handle(json.RawMessage(`{"seeds":["leaf"]}`))
 	require.NoError(t, err)
 	assert.Contains(t, out, `"links"`)
 
@@ -90,13 +90,13 @@ func TestTier2HandlersAndNames(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out, fxEntry)
 
-	out, err = toolByName(t, ix, "graphify_find_seeds").Handle(json.RawMessage(`{"question":"leaf"}`))
+	out, err = toolByName(t, ix, "find_seeds").Handle(json.RawMessage(`{"question":"leaf"}`))
 	require.NoError(t, err)
 	assert.Contains(t, out, fxLeaf)
 
-	_, err = toolByName(t, ix, "graphify_expand").Handle(json.RawMessage(`{}`))
+	_, err = toolByName(t, ix, "expand").Handle(json.RawMessage(`{}`))
 	assert.ErrorContains(t, err, "ids is required")
-	_, err = toolByName(t, ix, "graphify_render_subgraph").Handle(json.RawMessage(`{}`))
+	_, err = toolByName(t, ix, "render_subgraph").Handle(json.RawMessage(`{}`))
 	assert.ErrorContains(t, err, "seeds is required")
 	_, err = toolByName(t, ix, "search").Handle(json.RawMessage(`{}`))
 	assert.ErrorContains(t, err, "query is required")

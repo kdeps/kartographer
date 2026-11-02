@@ -1,5 +1,5 @@
 // Command kartographer-mcp serves the code graph of a Go module over MCP on
-// stdio, with the tool names Graphify uses.
+// stdio, with the tool names.
 //
 //	kartographer-mcp -dir /path/to/module
 package main

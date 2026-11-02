@@ -15,11 +15,10 @@ const (
 	fetchMaxBytes = 16 * 1024
 )
 
-// Tier3Tools are the memory, workspace, risk and fetch tools under Graphify's
-// names. Notes are local (see package notes). Workspaces are one: this module.
+// Tier3Tools are the memory, workspace, risk and fetch tools. Notes are local (see package notes). Workspaces are one: this module.
 // Options that only the hosted memory service has (profiles, sufficiency,
 // grounding, time filters) are accepted and ignored. fetch takes a symbol name,
-// not Graphify's repository:snapshot:node id, because this index has no snapshots.
+// not a repository:snapshot:node id, because this index has no snapshots.
 func Tier3Tools(ix *Index) []mcp.Tool {
 	return []mcp.Tool{
 		{
