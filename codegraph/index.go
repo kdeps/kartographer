@@ -75,7 +75,9 @@ func Build(dir string) (*Index, error) {
 	idx := &Index{Root: root, Symbols: map[string]Symbol{}}
 	deps := map[string][]string{}
 
-	if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
+	_, modErr := os.Stat(filepath.Join(root, "go.mod"))
+	_, workErr := os.Stat(filepath.Join(root, "go.work"))
+	if modErr == nil || workErr == nil {
 		if err := indexGo(root, idx, deps); err != nil {
 			return nil, err
 		}
