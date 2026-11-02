@@ -1,65 +1,90 @@
 # kartographer
-**A Graph Library for Resolving Dependent Nodes**
 
-This package provides functionality for traversing and analyzing a dependency graph. The `DependencyGraph` struct and
-its methods allow for listing dependencies in various orders, including direct, recursive, top-down, and reverse
-dependencies.
+Kartographer builds a code graph of a module: symbols, call edges, references, and test links, queried from the command line or over MCP. Go is analysed with `go/types`, SSA and call-graph analysis. Other languages use the language server installed for them.
 
-## Table of Contents
+## Install
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Functions](#functions)
-  - [TraverseDependencyGraph](#traversedependencygraph)
-  - [ListDependencyTreeTopDown](#listdependencytreetopdown)
-  - [ListDependenciesRecursive](#listdependenciesrecursive)
-  - [ListReverseDependencies](#listreversedependencies)
-  - [ListDependencyTree](#listdependencytree)
-  - [BuildDependencyStack](#builddependencystack)
-  - [InvertDependencies](#invertdependencies)
-  - [ListDirectDependencies](#listdirectdependencies)
-- [Utility Functions](#utility-functions)
-- [Indexing a Folder](#indexing-a-folder)
-
-## Installation
-
-To use this package, you need to import it into your Go project. Make sure you have the following dependencies in your
-`go.mod` file:
-
-```go
-import (
-  graph "github.com/kdeps/kartographer/graph"
-)
+```bash
+go install github.com/kdeps/kartographer/cmd/kartographer@main
+go install github.com/kdeps/kartographer/cmd/kartographer-mcp@main
 ```
 
-## Usage
+## Rules file
 
-First, create a new `DependencyGraph` instance by calling the `NewDependencyGraph` function with the appropriate parameters.
+Every command needs a rules file (`-rules`). Kartographer has no built-in thresholds: ranking weights, result limits and stopwords come from YAML that the caller supplies. kdeps ships one at `assets/codegraph/rules.yaml`.
 
-```go
-import (
-    graph "github.com/kdeps/kartographer/graph"
-)
-
-dependencies := map[string][]string{
-    "A": {"B", "C"},
-    "B": {"D"},
-    "C": {"D"},
-    "D": {},
-}
-
-dg := graph.NewDependencyGraph(fs, logger, dependencies)
+```yaml
+ranking:
+  name_weight: 3
+  path_weight: 1
+  degree_weight: 0.1
+  body_lines: 30
+  stopwords: [the, of, is]
+paths:
+  max_depth: 8
+  max_paths: 10
+limits:
+  max_result: 300
 ```
 
-Then you can call any of the methods on the `DependencyGraph` instance to list dependencies in various orders.
+## Command line
 
-```go
-dg.ListDirectDependencies("A")
-dg.ListDependencyTree("A")
-dg.ListDependencyTreeTopDown("A")
-dg.ListReverseDependencies("D")
-
+```bash
+kartographer -rules rules.yaml update [dir]                  # build or refresh the index
+kartographer -rules rules.yaml query "where is the retry"    # matching symbols with source
+kartographer -rules rules.yaml path "Entry" "leaf"           # shortest connection
+kartographer -rules rules.yaml path "Entry" "leaf" --directed
+kartographer -rules rules.yaml explain "helper"              # source and neighbours
+kartographer -rules rules.yaml affected "leaf" --depth 2     # dependents, nearest first
+kartographer -rules rules.yaml watch [dir] [-interval 2s]    # rebuild when files change
+kartographer -rules rules.yaml hook install                  # rebuild after commits and checkouts
+kartographer -rules rules.yaml hook uninstall|status
+kartographer -rules rules.yaml export graphml [-o FILE]      # graphml, html, svg, neo4j, falkordb
+kartographer -rules rules.yaml export obsidian -o vault/     # one note per symbol, linked by calls
+kartographer -rules rules.yaml export wiki -o site/          # index plus one page per file
+kartographer -rules rules.yaml add "https://example.com/a"   # fetch a page into ./raw
 ```
+
+Global flags: `-rules FILE` (required), `-dir DIR` (module root, default `.`), `-no-cache`.
+`query` takes `--k`, `--budget` and `--skeleton`. `add` takes `--dir-raw` (default `raw`), `--author` and `--contributor`; it uses `--dir-raw` rather than `--dir` because `-dir` selects the module root.
+
+Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
+
+The git hooks rebuild only when `KARTOGRAPHER_RULES` is set to the rules file path. They never guess one.
+
+## MCP server
+
+```bash
+kartographer-mcp -rules rules.yaml -dir /path/to/module
+```
+
+Serves the code graph over stdio MCP. The tools are:
+
+| Group | Tools |
+|---|---|
+| Symbols | `find_symbol`, `node`, `search`, `find_seeds`, `query`, `rank_files` |
+| Calls | `callers`, `callees`, `trace`, `shortest_path`, `expand`, `render_subgraph` |
+| Impact and tests | `impact`, `impact_and_risk`, `tests_for` |
+| Files and references | `file_neighbors`, `references`, `imports_exports` (`imports_exports` is Go only) |
+| Memory | `remember`, `recall`, `memories_about` |
+| Workspace | `list_modules`, `list_workspaces`, `set_workspace`, `stats`, `fetch` |
+
+## Index cache
+
+`BuildCached` saves the index under `os.UserCacheDir()/kartographer/index`. It is reused until a file's path, size or modification time changes. `-no-cache` rebuilds it.
+
+## Language support
+
+| Language | How |
+|---|---|
+| Go | `go/types`, SSA and call-graph analysis. Supports references and imports. |
+| Other | The language server listed in `lsp/registry.yaml` for the file's extension, if it is on PATH. Its call hierarchy supplies the call edges. |
+
+`lsp/registry.yaml` lists 13 languages, from C and C++ to Swift and C#. The first server on PATH for a language is used.
+
+## Dependency graph package
+
+The `graph` package is a separate, lower-level library: a dependency graph over string keys, with direct, recursive, top-down, reverse and stack-based traversals. It does not read source code.
 
 ## Functions
 
@@ -230,71 +255,3 @@ references, roots, err := ig.GraphAll()
 
 Re-running `IndexFolder` on the same database fully re-indexes the folder, overwriting prior records for files that
 still exist and updating the topic index accordingly.
-
-## Code graph MCP server
-
-`cmd/kartographer-mcp` indexes a module and serves its code graph over MCP on stdio. Tools:
-
-- Symbols: `find_symbol`, `search`, `node`, `expand`, `fetch`
-- Calls: `callers`, `callees`, `impact`, `trace`, `shortest_path`, `render_subgraph`
-- Files and tests: `file_neighbors`, `tests_for`, `rank_files`, `impact_and_risk`
-- Questions: `query`, `find_seeds`, `rank_files`
-- Notes and workspaces: `remember`, `recall`, `memories_about`, `list_workspaces`, `set_workspace`
-- Module: `stats`, `list_modules`
-
-- Go-only analysis: `references` (non-call uses of a function, from SSA) and `imports_exports` (a file's imports and exported names).
-
-Business rules (ranking weights, stopwords, result limits, path bounds) are supplied by the caller as YAML and are not stored in this repository. `kartographer-mcp -rules <file>` reads them; kdeps keeps the rules file.
-
-Notes are local: one JSON file per module under the user config directory (`kartographer/notes`). The hosted memory
-service's options (profiles, sufficiency, grounding, time filters) are accepted and ignored. `fetch` takes a symbol
-name, not a repository:snapshot:node id.
-
-`query` and `rank_files` are keyword matches on symbol names and file paths, weighted by how connected
-a symbol is. They are not semantic search, so use specific words from the code.
-
-```bash
-go run ./cmd/kartographer-mcp -rules /path/to/rules.yaml -dir /path/to/module
-```
-
-Register it in an MCP client as a stdio server with the command above. The index is saved under the user cache
-directory (`kartographer/index`) and reused until a file under the module changes (its path, size or modification
-time). Pass `-no-cache` to rebuild. The saved index depends on the module's own files only, so a change in a
-dependency's source is not noticed until a module file also changes.
-
-- Go modules (a `go.mod` in the root) are analysed with SSA and VTA.
-- Other languages are analysed by a language server from `lsp/registry.yaml`, when one is on `PATH`. Languages with
-  no installed server are listed in the index as missing, not dropped silently. Symbols are named
-  `path/to/file::Outer.name`.
-- Calls come from the server's incoming-call hierarchy. Servers without it still report functions, without edges.
-- `strict_calls` and `code_only` are accepted for compatibility and have no effect yet.
-- Verified locally with gopls, clangd, rust-analyzer and sourcekit-lsp. The other registry entries are not yet run.
-
-## Command line
-
-`cmd/kartographer` runs the same code graph from the shell, with Graphify's command names. The rules file is
-required (see the caller note above); `-dir` picks the module (default `.`).
-
-```bash
-kartographer -rules rules.yaml update [dir]                  # build or refresh the index
-kartographer -rules rules.yaml query "where is the retry"    # find matching symbols, with source
-kartographer -rules rules.yaml path "Entry" "leaf"           # connection between two symbols
-kartographer -rules rules.yaml path "Entry" "leaf" --directed
-kartographer -rules rules.yaml explain "helper"              # a symbol with its source and neighbours
-kartographer -rules rules.yaml affected "leaf" --depth 2     # symbols that depend on it, nearest first
-```
-
-kartographer -rules rules.yaml watch [dir] [-interval 2s]     # rebuild when files change
-kartographer -rules rules.yaml hook install                  # rebuild after commits and checkouts
-kartographer -rules rules.yaml hook uninstall|status
-kartographer -rules rules.yaml export graphml [-o FILE]      # graphml, html, svg, neo4j, falkordb: file or stdout
-kartographer -rules rules.yaml export obsidian -o vault/    # one note per symbol, linked by calls
-kartographer -rules rules.yaml export wiki -o site/         # index plus one page per file
-kartographer -rules rules.yaml add "https://example.com/a"  # fetch a page into ./raw (--dir-raw, --author, --contributor)
-```
-
-`add` takes `--dir-raw` rather than Graphify's `--dir`, because `-dir` selects the module root.
-
-`query` takes `--k`, `--budget` and `--skeleton`. The git hooks rebuild only when `KARTOGRAPHER_RULES` is set to the
-rules file path; they never guess one. Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
-
