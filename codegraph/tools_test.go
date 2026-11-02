@@ -30,7 +30,7 @@ func TestToolNames(t *testing.T) {
 	assert.ElementsMatch(t, []string{
 		"find_symbol", "callers", "callees", "impact",
 		"tests_for", "rank_files", "query", "file_neighbors",
-		"stats", "list_modules",
+		"stats", "list_modules", "impact_of_diff",
 		"node", "trace", "shortest_path", "expand",
 		"find_seeds", "search", "render_subgraph",
 		"remember", "recall", "memories_about", "list_workspaces", "set_workspace", "impact_and_risk", "fetch",
