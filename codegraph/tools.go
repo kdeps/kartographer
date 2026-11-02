@@ -7,7 +7,7 @@ import (
 	"github.com/kdeps/kartographer/mcp"
 )
 
-// Default result limits, matching the Graphify tools.
+// Default result limits, for the tools.
 const (
 	findLimit      = 30
 	callerLimit    = 25
@@ -22,8 +22,7 @@ const (
 	maxResultLimit = 300
 )
 
-// Tools returns the code graph tools under the names Graphify uses, so a
-// client that calls Graphify can call this server unchanged.
+// Tools returns the code graph tools under stable names.
 //
 // strict_calls and code_only are accepted for compatibility. The index holds
 // only resolved calls and only code nodes, so both have no effect yet.
@@ -40,7 +39,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 	strictArg := map[string]any{"type": "boolean", "default": true, "description": "Accepted for compatibility; only resolved calls are indexed."}
 	return []mcp.Tool{
 		{
-			Name:        "graphify_find",
+			Name:        "find_symbol",
 			Description: "Locate where a function or method is defined. Matches a substring of the full symbol name.",
 			InputSchema: schema(map[string]any{
 				"term":      map[string]any{"type": "string", "description": "Substring of the symbol name."},
@@ -62,7 +61,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_callers",
+			Name:        "callers",
 			Description: "List the functions that call a symbol directly.",
 			InputSchema: schema(map[string]any{
 				"symbol":       symbolArg,
@@ -85,7 +84,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_callees",
+			Name:        "callees",
 			Description: "List the functions a symbol calls directly.",
 			InputSchema: schema(map[string]any{
 				"symbol":       symbolArg,
@@ -108,7 +107,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_impact",
+			Name:        "impact",
 			Description: "Direct callers and callees of a symbol: a bounded first-pass scope for a change.",
 			InputSchema: schema(map[string]any{
 				"target":    symbolArg,
@@ -131,7 +130,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_tests_for",
+			Name:        "tests_for",
 			Description: "Test functions that reach a symbol or a file through callers.",
 			InputSchema: schema(map[string]any{
 				"target": map[string]any{"type": "string", "description": "A symbol name, or a module-relative file path."},
@@ -153,7 +152,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_rank_files",
+			Name:        "rank_files",
 			Description: "Rank the files that match a question by the symbols in them. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"question": map[string]any{"type": "string", "description": "A question or a few keywords."},
@@ -180,7 +179,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "query_graph",
+			Name:        "query",
 			Description: "Find the symbols that match a question, with their source text cut to a budget. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"question": map[string]any{"type": "string", "description": "A question or a few keywords."},
@@ -215,7 +214,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_file_neighbors",
+			Name:        "file_neighbors",
 			Description: "A file's dependencies (files it calls into) and dependents (files that call into it), from the call graph.",
 			InputSchema: schema(map[string]any{
 				"file":         map[string]any{"type": "string", "description": "Module-relative file path."},
@@ -243,7 +242,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graph_stats",
+			Name:        "stats",
 			Description: "Counts of symbols and call edges in the indexed module.",
 			InputSchema: schema(map[string]any{}),
 			Handle: func(json.RawMessage) (string, error) {
@@ -253,7 +252,7 @@ func tierOneTools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "list_repositories",
+			Name:        "list_modules",
 			Description: "The module this server indexed. Its full_name is the repository_id.",
 			InputSchema: schema(map[string]any{}),
 			Handle: func(json.RawMessage) (string, error) {

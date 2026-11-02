@@ -15,14 +15,14 @@ const (
 	renderEdges    = 4000
 )
 
-// Tier2Tools are the path, neighbourhood and source tools under Graphify's names.
-// graphify_references and graphify_imports_exports are not served: they need
+// Tier2Tools are the path, neighbourhood and source tools.
+// references and imports_exports are not served: they need
 // non-call references and import statements, which the index does not store.
 func Tier2Tools(ix *Index) []mcp.Tool {
 	symbolArg := map[string]any{"type": "string", "description": "Symbol name, e.g. 'Type.Method' or 'pkg.Func'."}
 	return []mcp.Tool{
 		{
-			Name:        "graphify_node",
+			Name:        "node",
 			Description: "A symbol's source plus its direct callers and callees.",
 			InputSchema: schema(map[string]any{
 				"symbol":       symbolArg,
@@ -49,7 +49,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_trace",
+			Name:        "trace",
 			Description: "Directed call paths from one symbol to another, shortest first.",
 			InputSchema: schema(map[string]any{
 				"src":          map[string]any{"type": "string", "description": "Symbol to trace from."},
@@ -98,7 +98,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_expand",
+			Name:        "expand",
 			Description: "Source of each named symbol. Names are the symbol names returned by other tools.",
 			InputSchema: schema(map[string]any{
 				"ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Symbol names to read."},
@@ -118,7 +118,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_find_seeds",
+			Name:        "find_seeds",
 			Description: "The top symbols for a question, without their source. Keyword match, not semantic.",
 			InputSchema: schema(map[string]any{
 				"question": map[string]any{"type": "string"},
@@ -158,7 +158,7 @@ func Tier2Tools(ix *Index) []mcp.Tool {
 			},
 		},
 		{
-			Name:        "graphify_render_subgraph",
+			Name:        "render_subgraph",
 			Description: "The nodes and call edges around seed symbols, for drawing a graph.",
 			InputSchema: schema(map[string]any{
 				"seeds":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
