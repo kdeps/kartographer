@@ -269,3 +269,20 @@ dependency's source is not noticed until a module file also changes.
 - Calls come from the server's incoming-call hierarchy. Servers without it still report functions, without edges.
 - `strict_calls` and `code_only` are accepted for compatibility and have no effect yet.
 - Verified locally with gopls, clangd, rust-analyzer and sourcekit-lsp. The other registry entries are not yet run.
+
+## Command line
+
+`cmd/kartographer` runs the same code graph from the shell, with Graphify's command names. The rules file is
+required (see the caller note above); `-dir` picks the module (default `.`).
+
+```bash
+kartographer -rules rules.yaml update [dir]                  # build or refresh the index
+kartographer -rules rules.yaml query "where is the retry"    # find matching symbols, with source
+kartographer -rules rules.yaml path "Entry" "leaf"           # connection between two symbols
+kartographer -rules rules.yaml path "Entry" "leaf" --directed
+kartographer -rules rules.yaml explain "helper"              # a symbol with its source and neighbours
+kartographer -rules rules.yaml affected "leaf" --depth 2     # symbols that depend on it, nearest first
+```
+
+`query` takes `--k`, `--budget` and `--skeleton`. Exit codes: 0 success, 1 a lookup or rules error, 2 bad usage.
+
