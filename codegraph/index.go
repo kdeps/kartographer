@@ -190,8 +190,19 @@ func indexServers(root string, idx *Index, deps map[string][]string) error {
 			idx.Symbols[f.Key] = Symbol{Name: f.Key, File: f.File, Line: f.Line, Language: id, IsTest: isTestFile(f.File)}
 			deps[f.Key] = res.Calls[f.Key]
 		}
+		mergeRefs(idx, res.Refs)
 	}
 	return nil
+}
+
+// mergeRefs records the non-call uses a language server found.
+func mergeRefs(idx *Index, refs []lsp.Ref) {
+	if idx.refs == nil {
+		idx.refs = map[string][]Reference{}
+	}
+	for _, r := range refs {
+		idx.refs[r.Target] = append(idx.refs[r.Target], Reference{Symbol: r.Target, From: r.From, File: r.File, Line: r.Line})
+	}
 }
 
 // sourceFiles lists the files under root, skipping hidden and dependency directories.

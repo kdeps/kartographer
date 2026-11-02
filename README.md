@@ -67,7 +67,7 @@ Serves the code graph over stdio MCP. The tools are:
 | Symbols | `find_symbol`, `node`, `search`, `find_seeds`, `query`, `rank_files` |
 | Calls | `callers`, `callees`, `trace`, `shortest_path`, `expand`, `render_subgraph` |
 | Impact and tests | `impact`, `impact_and_risk`, `tests_for` |
-| Files and references | `file_neighbors`, `references`, `imports_exports` (`imports_exports` is Go only) |
+| Files and references | `file_neighbors`, `references` (every language with a server), `imports_exports` (Go only) |
 | Memory | `remember`, `recall`, `memories_about` |
 | Workspace | `list_modules`, `list_workspaces`, `set_workspace`, `stats`, `fetch` |
 
@@ -80,7 +80,7 @@ Serves the code graph over stdio MCP. The tools are:
 | Language | How |
 |---|---|
 | Go | `go/types`, SSA and call-graph analysis. Supports references and imports. |
-| Other | The language server listed in `lsp/registry.yaml` for the file's extension, if it is on PATH. Its call hierarchy supplies the call edges. |
+| Other | The language server listed in `lsp/registry.yaml` for the file's extension, if it is on PATH. Its call hierarchy supplies the call edges, and its references answers supply the non-call uses. Both are read at index time, one request per function, so indexing a large module with a server takes longer. |
 
 `lsp/registry.yaml` lists 13 languages, from C and C++ to Swift and C#. The first server on PATH for a language is used.
 
