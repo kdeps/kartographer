@@ -24,7 +24,7 @@ func captureOutput(f func()) string {
 	old := redirectStdout(w)
 	outC := startReader(r)
 	f()
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 	return <-outC
 }
@@ -52,7 +52,7 @@ func startReader(r *os.File) chan string {
 	outC := make(chan string)
 	go func() {
 		var buf bytes.Buffer
-		io.Copy(&buf, r)
+		_, _ = io.Copy(&buf, r)
 		outC <- buf.String()
 	}()
 	return outC
