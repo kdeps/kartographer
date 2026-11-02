@@ -32,6 +32,7 @@ commands:
   watch [dir]                        rebuild the index when files change
   hook install|uninstall|status      rebuild after commits and checkouts (set KARTOGRAPHER_RULES)
   export FORMAT [-o FILE|DIR]        write the graph: graphml, html, svg, obsidian, wiki, neo4j, falkordb
+  changes [base]                     the symbols that changes against base (default HEAD) touch, and what they affect
   add "<url>" [--dir-raw raw]        fetch a page into the raw directory (--author, --contributor)
 
 flags: -rules FILE (required), -dir DIR (default .), -no-cache`
@@ -79,7 +80,7 @@ var errUsage = errors.New("bad usage")
 
 //nolint:gochecknoglobals // fixed command list
 var knownCommands = map[string]bool{"update": true, "query": true, "path": true, "explain": true, "affected": true,
-	"watch": true, "hook": true, "export": true, "add": true}
+	"watch": true, "hook": true, "export": true, "add": true, "changes": true}
 
 // execute parses one command's flags and arguments, then runs it.
 func execute(cmd string, args []string, out io.Writer) error {
@@ -136,6 +137,12 @@ func execute(cmd string, args []string, out io.Writer) error {
 			return fmt.Errorf("%w: hook needs install, uninstall or status", errUsage)
 		}
 		return hookCommand(out, *dir, positional[0])
+	case "changes":
+		base := "HEAD"
+		if len(positional) > 0 {
+			base = positional[0]
+		}
+		return changesCommand(out, *dir, base, *depth, *limit, *noCache)
 	case "add":
 		if len(positional) == 0 {
 			return fmt.Errorf("%w: add needs a URL", errUsage)

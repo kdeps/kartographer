@@ -43,6 +43,7 @@ kartographer -rules rules.yaml export graphml [-o FILE]      # graphml, html, sv
 kartographer -rules rules.yaml export obsidian -o vault/     # one note per symbol, linked by calls
 kartographer -rules rules.yaml export wiki -o site/          # index plus one page per file
 kartographer -rules rules.yaml add "https://example.com/a"   # fetch a page into ./raw
+kartographer -rules rules.yaml changes [base]                 # symbols touched since base (default HEAD), and what they affect
 ```
 
 Global flags: `-rules FILE` (required), `-dir DIR` (module root, default `.`), `-no-cache`.
@@ -65,6 +66,7 @@ Serves the code graph over stdio MCP. The tools are:
 | Group | Tools |
 |---|---|
 | Symbols | `find_symbol`, `node`, `search`, `find_seeds`, `query`, `rank_files` |
+| Changes | `impact_of_diff` (the symbols a unified diff touches, and their dependents) |
 | Calls | `callers`, `callees`, `trace`, `shortest_path`, `expand`, `render_subgraph` |
 | Impact and tests | `impact`, `impact_and_risk`, `tests_for` |
 | Files and references | `file_neighbors`, `references` (every language with a server), `imports_exports` (Go only) |

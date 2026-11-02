@@ -15,7 +15,8 @@ import (
 func Tools(ix *Index) []mcp.Tool {
 	tools := append(tierOneTools(ix), Tier2Tools(ix)...)
 	tools = append(tools, Tier3Tools(ix)...)
-	return append(tools, RefTools(ix)...)
+	tools = append(tools, RefTools(ix)...)
+	return append(tools, ChangesTools(ix)...)
 }
 
 func tierOneTools(ix *Index) []mcp.Tool {
