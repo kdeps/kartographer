@@ -97,9 +97,14 @@ func IndexFolder(idx *InvertedIndex, root string, o FolderOptions) (int, error) 
 	if workers <= 0 {
 		workers = runtime.GOMAXPROCS(0)
 	}
-	var p FolderProgress
-	report := func() {
-		if o.Progress != nil {
+	var (
+		p  FolderProgress
+		mu sync.Mutex // p is counted by the writer and the walk; Progress sees one at a time
+	)
+	step := func(count func(*FolderProgress) bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		if count(&p) && o.Progress != nil {
 			o.Progress(p)
 		}
 	}
@@ -114,14 +119,14 @@ func IndexFolder(idx *InvertedIndex, root string, o FolderOptions) (int, error) 
 		batch := make([]DocWithTokens, 0, folderBatch)
 		for d := range docs {
 			batch = append(batch, d)
-			p.Read++
 			if len(batch) >= folderBatch {
 				idx.BatchAddDocuments(batch)
 				batch = batch[:0]
 			}
-			if o.ProgressEvery > 0 && p.Read%o.ProgressEvery == 0 {
-				report()
-			}
+			step(func(p *FolderProgress) bool {
+				p.Read++
+				return o.ProgressEvery > 0 && p.Read%o.ProgressEvery == 0
+			})
 		}
 		idx.BatchAddDocuments(batch)
 		close(done)
@@ -157,10 +162,10 @@ func IndexFolder(idx *InvertedIndex, root string, o FolderOptions) (int, error) 
 			return nil //nolint:nilerr // a file that vanished mid-walk is left out
 		}
 		if info.ModTime().Unix() == idx.LookupModTime(id) {
-			p.Unchanged++
-			if o.ProgressEvery > 0 && p.Unchanged%(o.ProgressEvery*10) == 0 { //nolint:mnd // unchanged files are cheap
-				report()
-			}
+			step(func(p *FolderProgress) bool {
+				p.Unchanged++
+				return o.ProgressEvery > 0 && p.Unchanged%(o.ProgressEvery*10) == 0 //nolint:mnd // unchanged files are cheap
+			})
 			return nil
 		}
 		jobs <- job{path: path, info: info}
@@ -170,8 +175,8 @@ func IndexFolder(idx *InvertedIndex, root string, o FolderOptions) (int, error) 
 	wg.Wait()
 	close(docs)
 	<-done
-	p.Purged = idx.PurgeDocs(seen)
-	report()
+	purged := idx.PurgeDocs(seen)
+	step(func(p *FolderProgress) bool { p.Purged = purged; return true })
 	return p.Read, walkErr
 }
 

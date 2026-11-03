@@ -105,3 +105,23 @@ func TestOpenOrCreate_ReplacesANonIndex(t *testing.T) {
 	assert.True(t, existed)
 	require.NoError(t, idx.Close())
 }
+
+func TestIndexFolder_ProgressWhileReadingAndSkipping(t *testing.T) {
+	root := t.TempDir()
+	for i := range 40 {
+		write(t, filepath.Join(root, "f"+strings.Repeat("x", i)+".md"), "word")
+	}
+	idx, _, err := OpenOrCreate(filepath.Join(t.TempDir(), "index.db"))
+	require.NoError(t, err)
+	defer func() { _ = idx.Close() }()
+	o := folderOptions()
+	o.ProgressEvery = 1
+	var calls int
+	o.Progress = func(FolderProgress) { calls++ }
+	_, err = IndexFolder(idx, root, o)
+	require.NoError(t, err)
+	write(t, filepath.Join(root, "new.md"), "word")
+	_, err = IndexFolder(idx, root, o)
+	require.NoError(t, err)
+	assert.Positive(t, calls, "progress is reported; -race checks it is not raced")
+}
