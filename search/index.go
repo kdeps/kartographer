@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"math"
-	"sort"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -268,13 +267,7 @@ func (idx *InvertedIndex) Search(queryTerms []string) []SearchResult {
 		return nil
 	})
 
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].MatchCount != results[j].MatchCount {
-			return results[i].MatchCount > results[j].MatchCount
-		}
-		return results[i].Score > results[j].Score
-	})
-
+	Rank(results)
 	return results
 }
 
