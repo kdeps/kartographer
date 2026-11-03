@@ -19,7 +19,7 @@ type DocOptions struct {
 	Tokenizer *Tokenizer
 	MaxSize   int64                             // larger files are left out; 0 keeps every size
 	Preview   int                               // bytes of text kept as the preview, cut at a character
-	Read      func(path string) (string, error) // a file's text; nil reads its bytes as text
+	Read      func(path string) (string, error) // a file's text; nil is ReadText
 }
 
 // DocID is the document id of the file at path.
@@ -33,10 +33,7 @@ func ReadDoc(path string, info fs.FileInfo, o DocOptions) (DocWithTokens, bool) 
 	}
 	read := o.Read
 	if read == nil {
-		read = func(p string) (string, error) {
-			b, err := os.ReadFile(p)
-			return string(b), err
-		}
+		read = ReadText
 	}
 	text, err := read(path)
 	if err != nil {
