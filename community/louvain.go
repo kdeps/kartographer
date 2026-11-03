@@ -212,7 +212,9 @@ func modularityOf(n int, edges []Edge, assign []int) float64 {
 	if m2 == 0 {
 		return 0
 	}
-	tot := map[int]float64{}
+	// Communities are numbered below n; summing them in id order keeps the
+	// float result the same on every call.
+	tot := make([]float64, n)
 	for i := range n {
 		tot[assign[i]] += k[i]
 	}

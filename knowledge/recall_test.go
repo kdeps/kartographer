@@ -89,3 +89,35 @@ func TestShortID(t *testing.T) {
 		}
 	}
 }
+
+func TestNeighbours_ExpandsTagsAndSkipsSelf(t *testing.T) {
+	g := &Graph{
+		Nodes: []*Node{
+			{ID: "note:a.md", Label: "a", Note: "a.md"},
+			{ID: "note:b.md", Label: "b", Note: "b.md"},
+			{ID: "note:c.md", Label: "c", Note: "c.md"},
+			{ID: "tag:billing", Label: "billing", Kind: KindTag},
+			{ID: "entity:x", Label: "x", Kind: "entity"},
+		},
+		Edges: []*Edge{
+			{From: "note:a.md", To: "tag:billing", Relation: RelTagged, Provenance: ProvExtracted, Confidence: 1},
+			{From: "note:b.md", To: "tag:billing", Relation: RelTagged, Provenance: ProvExtracted, Confidence: 1},
+			{From: "note:c.md", To: "tag:billing", Relation: RelTagged, Provenance: ProvExtracted, Confidence: 1},
+			{From: "note:a.md", To: "entity:x", Relation: "mentions", Provenance: ProvExtracted, Confidence: 1},
+		},
+	}
+	nb := testIndex(g).Neighbours("note:a.md")
+	got := map[string]string{}
+	for _, n := range nb {
+		got[n.Node.ID] = n.Relation
+	}
+	if len(nb) != 2 || got["note:b.md"] != RelTagged || got["note:c.md"] != RelTagged {
+		t.Fatalf("want tag-expanded b and c only, got %+v", nb)
+	}
+	if testIndex(g).Node("note:a.md") == nil || testIndex(g).Node("missing") != nil {
+		t.Errorf("Node lookup wrong")
+	}
+	if got := (*Index)(nil).Neighbours("x"); got != nil {
+		t.Errorf("nil index should list nothing")
+	}
+}
