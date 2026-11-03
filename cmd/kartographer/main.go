@@ -51,11 +51,11 @@ func run(args []string, out, errw io.Writer) int {
 	}
 	rest := global.Args()
 	if len(rest) == 0 {
-		fmt.Fprintln(errw, usage)
+		_, _ = fmt.Fprintln(errw, usage)
 		return 2
 	}
 	if *rulesPath == "" {
-		fmt.Fprintln(errw, "kartographer: -rules is required")
+		_, _ = fmt.Fprintln(errw, "kartographer: -rules is required")
 		return 2
 	}
 	raw, err := os.ReadFile(*rulesPath)
@@ -63,11 +63,11 @@ func run(args []string, out, errw io.Writer) int {
 		err = codegraph.Configure(raw)
 	}
 	if err != nil {
-		fmt.Fprintln(errw, "kartographer: rules:", err)
+		_, _ = fmt.Fprintln(errw, "kartographer: rules:", err)
 		return 1
 	}
 	if err := execute(rest[0], rest[1:], out); err != nil {
-		fmt.Fprintln(errw, "kartographer:", err)
+		_, _ = fmt.Fprintln(errw, "kartographer:", err)
 		if errors.Is(err, errUsage) {
 			return 2
 		}
@@ -115,9 +115,9 @@ func execute(cmd string, args []string, out io.Writer) error {
 			return err
 		}
 		symbols, edges := ix.Stats()
-		fmt.Fprintf(out, "indexed %s: %d symbols, %d call edges\n", ix.Module, symbols, edges)
+		_, _ = fmt.Fprintf(out, "indexed %s: %d symbols, %d call edges\n", ix.Module, symbols, edges)
 		for _, m := range ix.Missing {
-			fmt.Fprintf(out, "missing: %s\n", m)
+			_, _ = fmt.Fprintf(out, "missing: %s\n", m)
 		}
 		return nil
 	}
@@ -174,10 +174,10 @@ func execute(cmd string, args []string, out io.Writer) error {
 				return err
 			}
 			if len(paths) == 0 {
-				fmt.Fprintln(out, "no path")
+				_, _ = fmt.Fprintln(out, "no path")
 				return nil
 			}
-			fmt.Fprintln(out, strings.Join(paths[0], " -> "))
+			_, _ = fmt.Fprintln(out, strings.Join(paths[0], " -> "))
 			return nil
 		}
 		path, err := ix.ShortestPath(positional[0], positional[1])
@@ -185,19 +185,19 @@ func execute(cmd string, args []string, out io.Writer) error {
 			return err
 		}
 		if path == nil {
-			fmt.Fprintln(out, "no path")
+			_, _ = fmt.Fprintln(out, "no path")
 			return nil
 		}
-		fmt.Fprintln(out, strings.Join(path, " -- "))
+		_, _ = fmt.Fprintln(out, strings.Join(path, " -- "))
 		return nil
 	case "explain":
 		sym, body, neigh, err := ix.Node(positional[0], 12)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(out, "%s  %s:%d\n\n%s\n\nneighbours:\n", sym.Name, sym.File, sym.Line, body)
+		_, _ = fmt.Fprintf(out, "%s  %s:%d\n\n%s\n\nneighbours:\n", sym.Name, sym.File, sym.Line, body)
 		for _, n := range neigh {
-			fmt.Fprintf(out, "  %s  %s:%d\n", n.Name, n.File, n.Line)
+			_, _ = fmt.Fprintf(out, "  %s  %s:%d\n", n.Name, n.File, n.Line)
 		}
 		return nil
 	case "affected":
@@ -206,7 +206,7 @@ func execute(cmd string, args []string, out io.Writer) error {
 			return err
 		}
 		for _, s := range syms {
-			fmt.Fprintf(out, "%s  %s:%d\n", s.Name, s.File, s.Line)
+			_, _ = fmt.Fprintf(out, "%s  %s:%d\n", s.Name, s.File, s.Line)
 		}
 		return nil
 	}
@@ -241,14 +241,14 @@ func isBoolFlag(a string) bool {
 
 func printHits(out io.Writer, hits []codegraph.Hit, skeleton bool) error {
 	if len(hits) == 0 {
-		fmt.Fprintln(out, "no matches")
+		_, _ = fmt.Fprintln(out, "no matches")
 		return nil
 	}
 	for _, h := range hits {
-		fmt.Fprintf(out, "%s  %s:%d  score %.2f\n", h.Symbol.Name, h.Symbol.File, h.Symbol.Line, h.Score)
+		_, _ = fmt.Fprintf(out, "%s  %s:%d  score %.2f\n", h.Symbol.Name, h.Symbol.File, h.Symbol.Line, h.Score)
 		if !skeleton && h.Body != "" {
-			fmt.Fprintln(out, h.Body)
-			fmt.Fprintln(out)
+			_, _ = fmt.Fprintln(out, h.Body)
+			_, _ = fmt.Fprintln(out)
 		}
 	}
 	return nil

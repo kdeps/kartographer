@@ -52,14 +52,14 @@ func hookCommand(out io.Writer, dir, sub string) error {
 				return err
 			}
 		}
-		fmt.Fprintf(out, "installed %s in %s\n", strings.Join(hookNames, ", "), hooks)
+		_, _ = fmt.Fprintf(out, "installed %s in %s\n", strings.Join(hookNames, ", "), hooks)
 	case "uninstall":
 		for _, name := range hookNames {
 			if err := writeHook(filepath.Join(hooks, name), false); err != nil {
 				return err
 			}
 		}
-		fmt.Fprintln(out, "uninstalled")
+		_, _ = fmt.Fprintln(out, "uninstalled")
 	case "status":
 		for _, name := range hookNames {
 			raw, _ := os.ReadFile(filepath.Join(hooks, name))
@@ -67,7 +67,7 @@ func hookCommand(out io.Writer, dir, sub string) error {
 			if bytes.Contains(raw, []byte(hookBegin)) {
 				state = "installed"
 			}
-			fmt.Fprintf(out, "%s: %s\n", name, state)
+			_, _ = fmt.Fprintf(out, "%s: %s\n", name, state)
 		}
 	default:
 		return fmt.Errorf("%w: hook needs install, uninstall or status", errUsage)
@@ -128,10 +128,10 @@ func watchCommand(out io.Writer, dir string, interval time.Duration, rounds int,
 		if fp != last {
 			ix, err := load(dir, noCache)
 			if err != nil {
-				fmt.Fprintf(out, "rebuild failed: %v\n", err)
+				_, _ = fmt.Fprintf(out, "rebuild failed: %v\n", err)
 			} else {
 				symbols, edges := ix.Stats()
-				fmt.Fprintf(out, "indexed %s: %d symbols, %d call edges\n", ix.Module, symbols, edges)
+				_, _ = fmt.Fprintf(out, "indexed %s: %d symbols, %d call edges\n", ix.Module, symbols, edges)
 			}
 			last = fp
 		}
@@ -163,7 +163,7 @@ func exportCommand(out io.Writer, format, path, dir string, noCache bool) error 
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(out, "wrote %s\n", path)
+		_, _ = fmt.Fprintf(out, "wrote %s\n", path)
 		return nil
 	case "graphml", "html", "svg", "neo4j", "falkordb":
 	default:
@@ -183,11 +183,11 @@ func exportCommand(out io.Writer, format, path, dir string, noCache bool) error 
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := write(f, ix); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "wrote %s\n", path)
+	_, _ = fmt.Fprintf(out, "wrote %s\n", path)
 	return nil
 }
 
@@ -202,7 +202,7 @@ func addCommand(out io.Writer, url, dir, author, contributor string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode/100 != 2 {
 		return fmt.Errorf("fetch %s: %s", url, resp.Status)
 	}
@@ -215,13 +215,13 @@ func addCommand(out io.Writer, url, dir, author, contributor string) error {
 	}
 	var doc bytes.Buffer
 	doc.WriteString("---\n")
-	fmt.Fprintf(&doc, "source: %q\n", url)
-	fmt.Fprintf(&doc, "fetched: %q\n", time.Now().UTC().Format(time.RFC3339))
+	_, _ = fmt.Fprintf(&doc, "source: %q\n", url)
+	_, _ = fmt.Fprintf(&doc, "fetched: %q\n", time.Now().UTC().Format(time.RFC3339))
 	if author != "" {
-		fmt.Fprintf(&doc, "author: %q\n", author)
+		_, _ = fmt.Fprintf(&doc, "author: %q\n", author)
 	}
 	if contributor != "" {
-		fmt.Fprintf(&doc, "contributor: %q\n", contributor)
+		_, _ = fmt.Fprintf(&doc, "contributor: %q\n", contributor)
 	}
 	doc.WriteString("---\n\n")
 	doc.Write(body)
@@ -229,7 +229,7 @@ func addCommand(out io.Writer, url, dir, author, contributor string) error {
 	if err := os.WriteFile(name, doc.Bytes(), 0o600); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "saved %s\n", name)
+	_, _ = fmt.Fprintf(out, "saved %s\n", name)
 	return nil
 }
 

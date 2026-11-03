@@ -5,6 +5,7 @@
 package treesitter
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 
@@ -97,7 +98,10 @@ func Extract(path string, src []byte) ([]Func, error) {
 	parser := sitter.NewParser()
 	defer parser.Close()
 	parser.SetLanguage(g.lang)
-	tree := parser.Parse(nil, src)
+	tree, err := parser.ParseCtx(context.Background(), nil, src)
+	if err != nil {
+		return nil, err
+	}
 	if tree == nil {
 		return nil, nil
 	}

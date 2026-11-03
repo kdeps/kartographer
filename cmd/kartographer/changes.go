@@ -34,16 +34,16 @@ func gitDiff(dir, base string) (string, error) {
 }
 
 func printChanges(out io.Writer, ix *codegraph.Index, diff string, depth, limit int) {
-	fmt.Fprintln(out, "changed:")
+	_, _ = fmt.Fprintln(out, "changed:")
 	changed := ix.Changed(diff)
 	if len(changed) == 0 {
-		fmt.Fprintln(out, "  none")
+		_, _ = fmt.Fprintln(out, "  none")
 	}
 	for _, s := range changed {
-		fmt.Fprintf(out, "  %s  %s:%d\n", s.Name, s.File, s.Line)
+		_, _ = fmt.Fprintf(out, "  %s  %s:%d\n", s.Name, s.File, s.Line)
 	}
-	fmt.Fprintln(out, "impact:")
+	_, _ = fmt.Fprintln(out, "impact:")
 	for _, s := range ix.Impact(diff, depth, limit) {
-		fmt.Fprintf(out, "  %s  %s:%d\n", s.Name, s.File, s.Line)
+		_, _ = fmt.Fprintf(out, "  %s  %s:%d\n", s.Name, s.File, s.Line)
 	}
 }
