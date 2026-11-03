@@ -12,10 +12,12 @@ func TestMethod(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		gotA, gotQ := d(5, edges)
 		wantA, wantQ := want(5, edges)
-		if !reflect.DeepEqual(gotA, wantA) || gotQ != wantQ {
-			t.Errorf("%s does not match its detector", name)
+		for range 200 {
+			gotA, gotQ := d(5, edges)
+			if !reflect.DeepEqual(gotA, wantA) || gotQ != wantQ {
+				t.Fatalf("%s does not match its detector on every call: %v %v vs %v %v", name, gotA, gotQ, wantA, wantQ)
+			}
 		}
 	}
 	if _, err := Method("girvan"); err == nil {
