@@ -18,10 +18,7 @@ func SplitBody(body string, header []string) BodyParts {
 		switch {
 		case t == "", strings.HasPrefix(t, "#"):
 		case strings.HasPrefix(t, "|"):
-			cells := strings.Split(strings.Trim(t, "|"), "|")
-			for i := range cells {
-				cells[i] = strings.TrimSpace(cells[i])
-			}
+			cells, _ := TableRow(t)
 			if strings.Trim(cells[0], "-: ") == "" {
 				continue // separator row
 			}
@@ -34,6 +31,20 @@ func SplitBody(body string, header []string) BodyParts {
 		}
 	}
 	return p
+}
+
+// TableRow is the trimmed cells of one "| cell | cell |" line, and ok false
+// for a line that is not a pipe table row (it must start and end with a pipe).
+func TableRow(line string) (cells []string, ok bool) {
+	t := strings.TrimSpace(line)
+	if len(t) < 2 || !strings.HasPrefix(t, "|") || !strings.HasSuffix(t, "|") {
+		return nil, false
+	}
+	cells = strings.Split(t[1:len(t)-1], "|")
+	for i := range cells {
+		cells[i] = strings.TrimSpace(cells[i])
+	}
+	return cells, true
 }
 
 // AppendTableRow adds a "| cell | cell |" row at the end of text. withHeader

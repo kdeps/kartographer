@@ -34,3 +34,18 @@ func TestAppendTableRow(t *testing.T) {
 		t.Errorf("second row = %q", second)
 	}
 }
+
+func TestTableRow(t *testing.T) {
+	cells, ok := TableRow("  | search | /a/b |  ")
+	if !ok || !reflect.DeepEqual(cells, []string{"search", "/a/b"}) {
+		t.Fatalf("row = %q, %v", cells, ok)
+	}
+	if cells, ok = TableRow("||"); !ok || !reflect.DeepEqual(cells, []string{""}) {
+		t.Fatalf("empty row = %q, %v", cells, ok)
+	}
+	for _, line := range []string{"not a row", "| open", "|", ""} {
+		if _, ok = TableRow(line); ok {
+			t.Fatalf("%q read as a row", line)
+		}
+	}
+}
